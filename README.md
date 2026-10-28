@@ -196,6 +196,7 @@ key, and the header `X-Sesame-Assertion`. Apps do not parse the token themselves
 - `BEST_PRACTICES.md`: the short list of rules the gateway holds itself to.
 - `OPEN_QUESTIONS.md`: what is unanswered, what is missing, what is not built yet.
 - `CHANGELOG.md`: what changed.
+- `site/`: the front page, a static sheet set for the gatehouse (`site/index.html`; see `site/README.md`).
 
 ## The name
 

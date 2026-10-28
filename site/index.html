@@ -1,0 +1,598 @@
+<!doctype html>
+<html lang="en" data-theme="wsu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DRAWBRIDGE — Comes down for signed-in people</title>
+<meta name="description" content="DRAWBRIDGE is the Citadel's SAML auth gateway at auth.apps.wayne.edu: one service provider in front of every app. It makes sure the visitor signed in, strips every identity header they brought along, and hands the app a short-lived ES256-signed assertion.">
+<meta name="theme-color" content="#f4f1ea">
+<meta name="color-scheme" content="light">
+<link rel="icon" href="brand/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="brand/favicon-32.png">
+<link rel="apple-touch-icon" href="brand/drawbridge-avatar-256.png">
+<link rel="preload" href="assets/fonts/big-shoulders-stencil-display-latin-800-normal.woff2" as="font" type="font/woff2" crossorigin>
+<!--
+  WayneUI 2.0.8, copied from its documented static path
+  (wayne-ui/apps/site/public/v2) so this page works offline: tokens, Lato,
+  container, buttons, tabs, skip link and sr-only come from it. The drafting
+  look is drawbridge.css, unlayered, so it wins without !important.
+-->
+<link rel="stylesheet" href="assets/wayne-ui/wayne-ui.css">
+<link rel="stylesheet" href="assets/drawbridge.css">
+<script>
+  /* The bridge only swings for people who are happy with motion. Everyone
+     else gets the finished drawing: bridge down, ink dry, nothing moving. */
+  if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: no-preference)").matches) {
+    document.documentElement.classList.add("motion");
+  }
+</script>
+</head>
+<body>
+<a class="wsu-skip-link" href="#main">Skip to content</a>
+
+<header class="site-header">
+  <div class="wsu-container site-header__row">
+    <a class="brand" href="#main">
+      <img src="brand/drawbridge-avatar-256.png" width="36" height="36" alt="">
+      <span class="brand__name">DRAWBRIDGE</span>
+    </a>
+    <nav class="sheet-index" aria-label="Sheets">
+      <a href="#section-title"><span class="sheet-index__no">A-201</span> Section</a>
+      <a href="#schedule-title"><span class="sheet-index__no">A-301</span> Doors</a>
+      <a href="#detail-title"><span class="sheet-index__no">A-401</span> Assertion</a>
+      <a href="#build-title"><span class="sheet-index__no">A-601</span> Build</a>
+    </nav>
+    <span class="brand__rev" title="Version">Rev 0.1</span>
+  </div>
+</header>
+
+<main id="main">
+
+  <!-- ===================================================== A-101 the hero -->
+  <section class="sheet sheet--hero" aria-labelledby="hero-title">
+    <div class="wsu-container hero">
+
+      <div class="hero__copy">
+        <p class="sheet-tag"><span class="sheet-tag__no">A-101</span> Gatehouse · section A–A</p>
+        <h1 class="hero__title" id="hero-title">
+          <span class="wsu-sr-only">DRAWBRIDGE</span>
+          <span class="hero__letters" aria-hidden="true"><span style="--i:0">D</span><span style="--i:1">R</span><span style="--i:2">A</span><span style="--i:3">W</span><span style="--i:4">B</span><span style="--i:5">R</span><span style="--i:6">I</span><span style="--i:7">D</span><span style="--i:8">G</span><span style="--i:9">E</span></span>
+        </h1>
+        <p class="hero__tagline">Comes down for signed-in people.</p>
+
+        <!-- Not an acronym: the name is the thing. Set as a legend entry. -->
+        <dl class="legend-entry">
+          <dt><span class="legend-entry__word">draw·bridge</span> <span class="legend-entry__pos">noun, not an acronym</span></dt>
+          <dd>The one way into the Citadel. It comes down only for people who are signed in, and goes back up for everyone else.</dd>
+        </dl>
+
+        <p class="hero__blurb">One SAML service provider at <strong>auth.apps.wayne.edu</strong>, in front of every app on the platform. It makes sure the visitor has a session, throws away any identity header they tried to bring along, and hands the app a 60-second ES256-signed assertion that SESAME verifies.</p>
+
+        <p class="hero__cta">
+          <a class="wsu-btn wsu-btn--primary wsu-btn--lg" href="#build-title">Build the gatehouse</a>
+          <a class="hero__link" href="#section-title">Read the section</a>
+        </p>
+      </div>
+
+      <figure class="drawing is-down" data-gate>
+        <!-- The mark, in a detail callout: the drawing beside it is detail 1,
+             enlarged. The mark itself is never redrawn or edited. -->
+        <div class="drawing__callout">
+          <span class="drawing__bubble"><img src="brand/drawbridge-avatar-256.png" width="256" height="256" alt="DRAWBRIDGE mark: a cream gatehouse tower on a green tile, its bridge lowered on a gold chain"></span>
+          <span class="drawing__callout-label" aria-hidden="true">1 · enlarged</span>
+        </div>
+
+        <svg class="gate" viewBox="0 0 640 500" role="img" aria-labelledby="gate-title gate-desc">
+          <title id="gate-title">Section through the DRAWBRIDGE gatehouse</title>
+          <desc id="gate-desc">An architect's section: a visitor stands on the approach bank, a moat lies between the bank and the gatehouse, and the drawbridge hangs from a gold chain. Inside the gatehouse are the header guard, the SAML service provider and the assertion signer; the passage leads to the app.</desc>
+          <defs>
+            <pattern id="hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+              <line x1="0" y1="0" x2="0" y2="7" class="hatch-line"/>
+            </pattern>
+            <pattern id="earth" width="14" height="14" patternUnits="userSpaceOnUse">
+              <circle cx="3" cy="4" r="1" class="earth-dot"/><circle cx="10" cy="10" r="1.2" class="earth-dot"/><circle cx="11" cy="3" r=".7" class="earth-dot"/>
+            </pattern>
+            <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0 1 L9 5 L0 9" class="arrow-head"/>
+            </marker>
+            <marker id="tick" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="9" markerHeight="9" orient="auto">
+              <path d="M2 8 L8 2" class="tick"/>
+            </marker>
+          </defs>
+
+          <!-- ground: approach bank, moat, gatehouse footing -->
+          <g class="ink ink--ground">
+            <path class="draw" d="M10 380 H290 L300 470 H430 L440 380 H630"/>
+            <path class="fill-earth" d="M10 380 H290 L300 470 H430 L440 380 H630 V496 H10 Z"/>
+            <path class="draw thin" d="M10 380 H290"/>
+          </g>
+          <!-- water -->
+          <g class="water">
+            <path class="draw water__line" d="M296 424 h128"/>
+            <path class="water__wave" d="M304 436 q6 -4 12 0 t12 0 t12 0 t12 0 t12 0 t12 0 t12 0 t12 0 t12 0"/>
+            <path class="water__wave water__wave--2" d="M310 450 q6 -4 12 0 t12 0 t12 0 t12 0 t12 0 t12 0 t12 0 t12 0"/>
+          </g>
+
+          <!-- the gatehouse, cut: hatched poché walls around the passage -->
+          <g class="ink ink--house">
+            <path class="poche" d="M440 380 V250 Q440 214 476 210 H560 Q596 214 596 250 V380 H612 V110 H600 V90 H584 V110 H566 V90 H550 V110 H532 V90 H516 V110 H498 V90 H482 V110 H464 V90 H448 V110 H440 V250 Z" />
+            <path class="draw" d="M440 380 V110 H448 V90 H464 V110 H482 V90 H498 V110 H516 V90 H532 V110 H550 V90 H566 V110 H584 V90 H600 V110 H612 V380"/>
+            <path class="draw" d="M440 250 Q440 214 476 210 H560 Q596 214 596 250 V380"/>
+            <!-- arrow slit and the chain pulley -->
+            <rect class="draw thin" x="520" y="134" width="8" height="34" rx="4"/>
+            <circle class="draw pulley" cx="452" cy="150" r="7"/>
+          </g>
+
+          <!-- the three rooms inside the passage -->
+          <g class="rooms">
+            <g class="room" transform="translate(474 244)"><circle r="13" class="room__tag"/><text class="room__no" y="5">1</text></g>
+            <g class="room" transform="translate(518 244)"><circle r="13" class="room__tag"/><text class="room__no" y="5">2</text></g>
+            <g class="room" transform="translate(562 244)"><circle r="13" class="room__tag"/><text class="room__no" y="5">3</text></g>
+          </g>
+
+          <!-- the bridge: hinged at (440,380). rotate(90) is raised, 0 is down. -->
+          <g class="bridge" data-bridge>
+            <g class="bridge__shake">
+              <rect class="bridge__deck" x="292" y="380" width="148" height="11" rx="2"/>
+              <path class="bridge__planks" d="M310 380v11M328 380v11M346 380v11M364 380v11M382 380v11M400 380v11M418 380v11"/>
+            </g>
+          </g>
+          <line class="chain" data-chain x1="452" y1="150" x2="298" y2="385"/>
+          <circle class="hinge" cx="440" cy="385" r="4"/>
+
+          <!-- the visitor, drafted at scale -->
+          <g class="visitor" data-visitor transform="translate(150 380)">
+            <g class="visitor__body">
+              <circle cx="0" cy="-52" r="7"/>
+              <path d="M0 -45 V-20 M0 -38 L-10 -26 M0 -38 L10 -26 M0 -20 L-8 0 M0 -20 L8 0"/>
+            </g>
+            <g class="visitor__badge" data-badge>
+              <rect x="-26" y="-86" width="52" height="16" rx="8"/>
+              <text x="0" y="-74.5">signed in</text>
+            </g>
+            <g class="visitor__token" data-token>
+              <rect x="-46" y="-86" width="92" height="16" rx="3"/>
+              <text x="0" y="-74.5">drawbridge+jwt</text>
+            </g>
+          </g>
+
+          <!-- forged headers, thrown at the gate by data-gate's script -->
+          <g class="forgeries" data-forgeries></g>
+
+          <!-- dimension lines and annotations -->
+          <g class="dims">
+            <path class="draw dim" d="M296 400 H436" marker-start="url(#tick)" marker-end="url(#tick)"/>
+            <text class="anno anno--dim" x="366" y="416">span: one sign-in</text>
+
+            <path class="draw dim" d="M628 90 V380" marker-start="url(#tick)" marker-end="url(#tick)"/>
+            <text class="anno anno--dim" transform="translate(624 236) rotate(-90)">13 rules high</text>
+
+            <path class="draw dim" d="M300 486 H430" marker-start="url(#tick)" marker-end="url(#tick)"/>
+            <text class="anno anno--dim" x="365" y="482">moat: 60 s deep</text>
+          </g>
+          <g class="annos">
+            <text class="anno anno--in" x="474" y="276" text-anchor="middle">guard</text>
+            <text class="anno anno--in" x="518" y="276" text-anchor="middle">SAML</text>
+            <text class="anno anno--in" x="562" y="276" text-anchor="middle">sign</text>
+            <text class="anno anno--small" x="128" y="404">the approach</text>
+            <text class="anno anno--small" x="452" y="404">the Citadel →</text>
+          </g>
+
+          <!-- the IdP: off this sheet, by others. Sign-in goes there and back. -->
+          <g class="idp">
+            <rect class="idp__box" x="132" y="96" width="206" height="52" rx="4"/>
+            <text class="anno idp__name" x="235" y="119" text-anchor="middle">the IdP (SAML)</text>
+            <text class="anno anno--small idp__note" x="235" y="138" text-anchor="middle">off this sheet, by others</text>
+            <path class="idp__trip" d="M146 290 C118 236 132 184 190 152" marker-end="url(#arrow)"/><path class="idp__trip idp__trip--back" d="M272 152 C300 196 236 250 166 292" marker-end="url(#arrow)"/>
+          </g>
+
+          <!-- section cut marker -->
+          <g class="cut">
+            <circle cx="40" cy="44" r="16" class="cut__bubble"/>
+            <text x="40" y="50" class="cut__letter">A</text>
+            <path d="M56 44 H96" class="cut__line"/>
+            <text x="104" y="49" class="anno anno--small">section A–A · scale: one request</text>
+          </g>
+        </svg>
+
+        <div class="gate-controls">
+          <button class="gate-btn gate-btn--primary" type="button" data-signin aria-pressed="false">
+            <span class="gate-btn__label">Sign in</span>
+          </button>
+          <button class="gate-btn" type="button" data-forge>Forge a header</button>
+        </div>
+        <figcaption class="gate-status" data-status aria-live="polite">The bridge is down for a signed-in visitor. A forged header would be stripped at the gate, before sign-in runs.</figcaption>
+      </figure>
+
+    </div>
+  </section>
+
+  <!-- ================================================ A-201 the section -->
+  <section class="sheet" aria-labelledby="section-title">
+    <div class="wsu-container">
+      <header class="sheet__head" data-reveal>
+        <p class="sheet-tag"><span class="sheet-tag__no">A-201</span> Longitudinal section</p>
+        <h2 id="section-title">One request through the gatehouse</h2>
+        <p>Apache httpd with four modules and a small PHP component. Every request takes the same passage, in this order.</p>
+      </header>
+
+      <ol class="passage" data-reveal>
+        <li class="passage__room" style="--i:0">
+          <span class="passage__no" aria-hidden="true">0</span>
+          <h3>Browser</h3>
+          <p>Arrives with whatever headers it likes. It may have brought a forgery.</p>
+          <p class="passage__mod">the approach</p>
+        </li>
+        <li class="passage__room" style="--i:1">
+          <span class="passage__no" aria-hidden="true">1</span>
+          <h3>Guard</h3>
+          <p>Strips every inbound identity header, in every hyphen and underscore spelling, before anything else runs.</p>
+          <p class="passage__mod">mod_lua</p>
+        </li>
+        <li class="passage__room" style="--i:2">
+          <span class="passage__no" aria-hidden="true">2</span>
+          <h3>Service provider</h3>
+          <p>One SAML SP for every app, one session cookie per app host. No session: off to sign in.</p>
+          <p class="passage__mod">mod_auth_mellon</p>
+        </li>
+        <li class="passage__room" style="--i:3">
+          <span class="passage__no" aria-hidden="true">3</span>
+          <h3>Signer</h3>
+          <p>Mints a fresh ES256 assertion for this request. If it cannot sign, the answer is 503.</p>
+          <p class="passage__mod">mod_rewrite prg: map + PHP</p>
+        </li>
+        <li class="passage__room" style="--i:4">
+          <span class="passage__no" aria-hidden="true">4</span>
+          <h3>App</h3>
+          <p>Gets the request with one signed header, and verifies it with SESAME's <code>gateway</code> driver.</p>
+          <p class="passage__mod">mod_proxy</p>
+        </li>
+      </ol>
+
+      <div class="outcomes" data-reveal>
+        <div class="outcome">
+          <p class="outcome__kind">login</p>
+          <p class="outcome__what">No session? The browser goes to sign in, then comes back.</p>
+        </div>
+        <div class="outcome">
+          <p class="outcome__kind">api</p>
+          <p class="outcome__what">No session? A plain <strong>401</strong>. A script is never handed an HTML login page.</p>
+        </div>
+        <div class="outcome">
+          <p class="outcome__kind">public</p>
+          <p class="outcome__what">Passes through with no identity at all. Public is a decision, not a default.</p>
+        </div>
+        <div class="outcome outcome--warn">
+          <p class="outcome__kind">signer down</p>
+          <p class="outcome__what"><strong>503</strong>. A request never reaches the app unsigned.</p>
+        </div>
+      </div>
+
+      <p class="margin-note" data-reveal>Why a moat and not a lock on every door: each app doing its own SAML is another chance to get XML signatures wrong. DRAWBRIDGE signs in once, in a maintained SP, and every app checks one small signed token.</p>
+    </div>
+  </section>
+
+  <!-- ================================================= A-301 door schedule -->
+  <section class="sheet sheet--schedule" aria-labelledby="schedule-title">
+    <div class="wsu-container">
+      <header class="sheet__head" data-reveal>
+        <p class="sheet-tag"><span class="sheet-tag__no">A-301</span> Door schedule</p>
+        <h2 id="schedule-title">Which doors need a key</h2>
+        <p>Each app declares its paths in one config file. Nothing else decides. Rules are exact (<code>/up</code>) or a prefix (<code>/assets/</code>); the longest wins, and exact beats a prefix of the same length. No wildcards, no regular expressions, and the query string never chooses.</p>
+      </header>
+
+      <div class="schedule" data-reveal>
+        <div class="schedule__table">
+          <div class="wsu-table-wrap">
+            <table class="door-table">
+              <caption>Door schedule for <code>app1.apps.wayne.edu</code>, from <code>config/drawbridge.example.yaml</code></caption>
+              <thead>
+                <tr><th scope="col">Door</th><th scope="col">Path</th><th scope="col">Rule</th><th scope="col">Needs</th></tr>
+              </thead>
+              <tbody>
+                <tr data-rule="/up"><td><span class="door-mark">D1</span></td><td><code>/up</code></td><td>exact</td><td><span class="key key--public">public</span></td></tr>
+                <tr data-rule="/assets/"><td><span class="door-mark">D2</span></td><td><code>/assets/</code></td><td>prefix</td><td><span class="key key--public">public</span></td></tr>
+                <tr data-rule="/admin/"><td><span class="door-mark">D3</span></td><td><code>/admin/</code></td><td>prefix</td><td><span class="key key--login">login</span></td></tr>
+                <tr data-rule="/api/"><td><span class="door-mark">D4</span></td><td><code>/api/</code></td><td>prefix</td><td><span class="key key--api">api</span></td></tr>
+                <tr data-rule="*"><td><span class="door-mark">D0</span></td><td><em>anything else</em></td><td>default</td><td><span class="key key--login">login</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="explain">
+          <form class="explain__form" data-explain>
+            <label for="explain-path">Try a path on <code>app1.apps.wayne.edu</code></label>
+            <div class="explain__row">
+              <input id="explain-path" name="path" type="text" value="/admin/users" autocomplete="off" spellcheck="false" inputmode="url">
+              <button class="gate-btn gate-btn--primary" type="submit">Explain</button>
+            </div>
+            <p class="explain__chips" aria-label="Examples">
+              <button type="button" class="chip" data-path="/up">/up</button>
+              <button type="button" class="chip" data-path="/upload">/upload</button>
+              <button type="button" class="chip" data-path="/api/v1/me">/api/v1/me</button>
+              <button type="button" class="chip" data-path="/admin/../up">/admin/../up</button>
+              <button type="button" class="chip" data-path="/up?x=1">/up?x=1</button>
+              <button type="button" class="chip" data-path="/a%2fb">/a%2fb</button>
+            </p>
+          </form>
+          <div class="term" aria-label="explain output">
+            <p class="term__bar" aria-hidden="true"><span></span><span></span><span></span></p>
+<pre class="term__body"><span class="t-dim">$</span> php bin/drawbridge explain app1.apps.wayne.edu <span data-explain-arg>/admin/users</span>
+<output data-explain-out for="explain-path">app1 /admin/users => login (matched as /admin/users)</output></pre>
+          </div>
+          <p class="explain__note">This box runs the same matching rules in your browser, written to agree with <code>explain</code> for the example config. The output lines are the real command's wording.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================== A-401 the assertion -->
+  <section class="sheet" aria-labelledby="detail-title">
+    <div class="wsu-container">
+      <header class="sheet__head" data-reveal>
+        <p class="sheet-tag"><span class="sheet-tag__no">A-401</span> Detail · the assertion</p>
+        <h2 id="detail-title">What crosses the bridge</h2>
+        <p>A compact JWT, minted for every request, good for 60 seconds by default. The key never leaves the signer.</p>
+      </header>
+
+      <div class="detail" data-reveal>
+        <div class="token">
+          <div class="token__part">
+            <p class="token__label">header</p>
+<pre><code>{
+  "alg": "ES256",
+  "typ": "drawbridge+jwt",
+  "kid": "drawbridge-1"
+}</code></pre>
+          </div>
+          <div class="token__part">
+            <p class="token__label">claims <span class="token__sample">(sample)</span></p>
+<pre><code>{
+  "iss": "https://auth.apps.wayne.edu",
+  "aud": "app1.apps.wayne.edu",
+  "sub": "ab1234",
+  "iat": <span data-iat>1798000000</span>, "nbf": <span data-nbf>1798000000</span>,
+  "exp": <span data-exp>1798000060</span>,
+  "jti": "<span data-jti>4f1c9a2e7b3d</span>",
+  "auth_time": 1797999400,
+  "amr": ["pwd", "mfa"],
+  "email": "…", "name": "…",
+  "affiliations": ["staff"]
+}</code></pre>
+          </div>
+          <div class="lifespan" aria-hidden="true">
+            <span class="lifespan__bar"><span class="lifespan__fill" data-life></span></span>
+            <span class="lifespan__ends"><span>iat</span><span>60 s</span><span>exp</span></span>
+          </div>
+          <p class="token__foot">Sent as <code>X-Sesame-Assertion</code>. Apps that cannot verify a token yet can take plain <code>X-Authenticated-*</code> headers instead (<code>mode: headers</code>), or both.</p>
+        </div>
+
+        <div class="stripped">
+          <h3>Left at the gate</h3>
+          <p>Removed from every request, in every hyphen and underscore spelling, before authentication runs. Then the gateway sets its own.</p>
+          <ul class="stripped__list" role="list">
+            <li><s>X-Authenticated-*</s></li>
+            <li><s>X-Sesame-*</s></li>
+            <li><s>X-Drawbridge-*</s></li>
+            <li><s>Remote-User</s></li>
+            <li><s>X-Remote-User</s></li>
+            <li><s>X-Forwarded-*</s></li>
+            <li><s>Forwarded</s></li>
+            <li><s>X-Real-IP</s></li>
+            <li><s>X-Auth-Request-*</s></li>
+            <li><s>Shib-Session-ID</s></li>
+            <li><s>Proxy</s></li>
+          </ul>
+          <p class="stripped__foot"><code>Connection</code> is trimmed to <code>close</code>, <code>keep-alive</code> and <code>upgrade</code>, so a client cannot ask the proxy to drop a header the gateway set.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================ A-501 general notes -->
+  <section class="sheet sheet--notes" aria-labelledby="notes-title">
+    <div class="wsu-container">
+      <header class="sheet__head" data-reveal>
+        <p class="sheet-tag"><span class="sheet-tag__no">A-501</span> General notes</p>
+        <h2 id="notes-title">Thirteen rules, each with a test</h2>
+        <p>From <code>BEST_PRACTICES.md</code>. The contractor shall not improvise.</p>
+      </header>
+      <ol class="notes" data-reveal>
+        <li><strong>Strip first.</strong> Every inbound identity header, every spelling, every request, before authentication.</li>
+        <li><strong>Fail closed.</strong> No session, no signature, a refused path, a missing key or a bad config means no access.</li>
+        <li><strong>Public is a decision.</strong> A path with no rule gets <code>login</code>. Public paths carry no identity.</li>
+        <li><strong>Match the normalised path.</strong> Encoded slashes, backslashes, semicolons and bad UTF-8 are treated as protected.</li>
+        <li><strong>Exact or prefix, nothing clever.</strong> The Apache pattern is built from the literal, never typed by hand.</li>
+        <li><strong>Sign narrowly and briefly.</strong> ES256, a pinned <code>typ</code>, one audience per app, a fresh <code>jti</code> each time.</li>
+        <li><strong>Let the SP do SAML.</strong> DRAWBRIDGE writes no XML signature code. Tampered responses are refused.</li>
+        <li><strong>One cookie per app host.</strong> A session on one host opens no other.</li>
+        <li><strong>Overwrite forwarded headers.</strong> <code>X-Forwarded-*</code> come from the gateway, never the client.</li>
+        <li><strong>Secrets stay out.</strong> Keys are mounted files. Logs carry a reason code, never a subject or a token.</li>
+        <li><strong>Do not trust the network.</strong> The app verifies the signature even if only the gateway can reach it.</li>
+        <li><strong>Run small and boring.</strong> Non-root, port above 1024, state under <code>/tmp</code>, logs to stdout.</li>
+        <li><strong>Bounded dependencies.</strong> No <code>*</code>, no <code>dev-master</code>; <code>composer audit</code> runs in CI.</li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- ===================================================== A-601 build -->
+  <section class="sheet" aria-labelledby="build-title">
+    <div class="wsu-container">
+      <header class="sheet__head" data-reveal>
+        <p class="sheet-tag"><span class="sheet-tag__no">A-601</span> Construction sequence</p>
+        <h2 id="build-title">Build the gatehouse</h2>
+        <p>You need Docker. The PHP component wants PHP 8.3+ and Composer, but the container carries its own, so these steps need nothing else.</p>
+      </header>
+
+      <div class="build" data-reveal>
+        <div class="wsu-tabs build__tabs" data-tabs>
+          <div class="wsu-tabs__list" role="tablist" aria-label="Your system">
+            <button class="wsu-tabs__tab" role="tab" type="button" id="tab-win" aria-controls="panel-win" aria-selected="true">Windows (PowerShell)</button>
+            <button class="wsu-tabs__tab" role="tab" type="button" id="tab-nix" aria-controls="panel-nix" aria-selected="false" tabindex="-1">Linux and macOS</button>
+          </div>
+          <div class="wsu-tabs__panel" role="tabpanel" id="panel-win" aria-labelledby="tab-win">
+            <div class="term term--copy">
+              <p class="term__bar" aria-hidden="true"><span></span><span></span><span></span></p>
+<pre class="term__body" id="cmd-win" tabindex="0" aria-label="Windows commands"><span class="t-dim">PS&gt;</span> git clone https://github.com/waynestate/drawbridge.git drawbridge; cd drawbridge
+<span class="t-dim">PS&gt;</span> docker run --rm -v "${PWD}:/app" -w /app composer:2.10.3 composer install --no-interaction
+<span class="t-dim">PS&gt;</span> Copy-Item .env.example .env
+<span class="t-dim">PS&gt;</span> Copy-Item config\drawbridge.example.yaml config\drawbridge.yaml
+<span class="t-dim">PS&gt;</span> docker run --rm -v "${PWD}:/app" -w /app composer:2.10.3 php bin/drawbridge config:validate --config=config/drawbridge.yaml
+<span class="t-ok">The config is valid: 1 app(s).</span>
+<span class="t-ok"> - app1 (app1.apps.wayne.edu): default login, 4 path rule(s), mode assertion</span>
+<span class="t-dim">PS&gt;</span> docker build -f docker/gateway/Dockerfile -t drawbridge-gateway .</pre>
+              <button class="copy-btn" type="button" data-copy-from="#cmd-win">Copy</button>
+            </div>
+          </div>
+          <div class="wsu-tabs__panel" role="tabpanel" id="panel-nix" aria-labelledby="tab-nix" hidden>
+            <div class="term term--copy">
+              <p class="term__bar" aria-hidden="true"><span></span><span></span><span></span></p>
+<pre class="term__body" id="cmd-nix" tabindex="0" aria-label="Linux and macOS commands"><span class="t-dim">$</span> git clone https://github.com/waynestate/drawbridge.git drawbridge &amp;&amp; cd drawbridge
+<span class="t-dim">$</span> docker run --rm -v "$PWD:/app" -w /app composer:2.10.3 composer install --no-interaction
+<span class="t-dim">$</span> cp .env.example .env
+<span class="t-dim">$</span> cp config/drawbridge.example.yaml config/drawbridge.yaml
+<span class="t-dim">$</span> docker run --rm -v "$PWD:/app" -w /app composer:2.10.3 php bin/drawbridge config:validate --config=config/drawbridge.yaml
+<span class="t-ok">The config is valid: 1 app(s).</span>
+<span class="t-ok"> - app1 (app1.apps.wayne.edu): default login, 4 path rule(s), mode assertion</span>
+<span class="t-dim">$</span> docker build -f docker/gateway/Dockerfile -t drawbridge-gateway .</pre>
+              <button class="copy-btn" type="button" data-copy-from="#cmd-nix">Copy</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="build__side">
+          <h3>Then raise it</h3>
+          <p>The entrypoint refuses to start until these are mounted, read-only. None of them is ever in git.</p>
+          <ul class="mounts" role="list">
+            <li><code>drawbridge.yaml</code> <span>the per-app config</span></li>
+            <li><code>idp-metadata.xml</code> <span>the IdP's SAML metadata</span></li>
+            <li><code>sp.key</code>, <code>sp.crt</code> <span>the SP's key pair; <code>sp:metadata</code> prints what to register</span></li>
+            <li><code>signing.key</code> <span>the ES256 key; <code>keys:generate</code> makes one</span></li>
+          </ul>
+          <div class="term term--small">
+<pre class="term__body" tabindex="0"><span class="t-dim">$</span> docker run --rm -p 8080:8080 --env-file .env \
+    -v "$PWD/config/drawbridge.yaml:/etc/drawbridge/drawbridge.yaml:ro" \
+    -v "$PWD/secrets:/run/drawbridge:ro" drawbridge-gateway</pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="tools" data-reveal>
+        <h3 class="tools__title">The drafting kit <span><code>php bin/drawbridge &lt;command&gt;</code></span></h3>
+        <dl class="tools__list">
+          <div><dt><code>config:validate</code></dt><dd>checks the config and prints every problem at once</dd></div>
+          <div><dt><code>explain &lt;host&gt; &lt;path&gt;</code></dt><dd>says which rule applies, and why</dd></div>
+          <div><dt><code>render</code></dt><dd>writes <code>apps.conf</code> and <code>policy.lua</code> for Apache</dd></div>
+          <div><dt><code>sp:metadata</code></dt><dd>one entity ID, one ACS per app host</dd></div>
+          <div><dt><code>keys:generate</code></dt><dd>an ES256 key pair; refuses to overwrite</dd></div>
+        </dl>
+        <div class="checks">
+          <div class="term term--small">
+<pre class="term__body" tabindex="0"><span class="t-dim">$</span> composer ci     <span class="t-dim"># manifest, unit tests, Pint, PHPStan level 8, composer audit</span>
+<span class="t-dim">PS&gt;</span> rig\run.ps1   <span class="t-dim"># the real image, a throwaway IdP and an echo app (Windows)</span>
+<span class="t-dim">$</span> sh rig/run.sh   <span class="t-dim"># the same rig on Linux and macOS</span></pre>
+          </div>
+          <p>The rig covers login, public and protected paths, header spoofing, path tricks, tampered and unsolicited SAML, signature checks against SESAME's rules, and logout. Nothing in it reaches a real IdP.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================================================== A-701 site plan -->
+  <section class="sheet sheet--site" aria-labelledby="site-title">
+    <div class="wsu-container">
+      <header class="sheet__head" data-reveal>
+        <p class="sheet-tag"><span class="sheet-tag__no">A-701</span> Site plan</p>
+        <h2 id="site-title">Where the gate stands in WELD</h2>
+        <p>WELD is the Wayne State app stack: one contract, several paths that agree. DRAWBRIDGE is the wall's one door; the rest of the stack lives inside.</p>
+      </header>
+
+      <ol class="route" data-reveal aria-label="A signed-in request, from the gate to the page">
+        <li class="route__stop route__stop--here" style="--i:0">
+          <span class="route__icon"><img src="brand/drawbridge-avatar-256.png" width="256" height="256" alt=""></span>
+          <span class="route__name">DRAWBRIDGE</span><span class="route__role">signs the visitor in, once</span>
+        </li>
+        <li class="route__stop" style="--i:1">
+          <span class="route__icon"><img src="assets/marks/sesame.png" width="256" height="256" alt=""></span>
+          <span class="route__name">SESAME</span><span class="route__role">its gateway driver verifies the token</span>
+        </li>
+        <li class="route__stop" style="--i:2">
+          <span class="route__icon"><img src="assets/marks/helmet.png" width="256" height="256" alt=""></span>
+          <span class="route__name">HELMET</span><span class="route__role">sets the security headers</span>
+        </li>
+        <li class="route__stop" style="--i:3">
+          <span class="route__icon route__icon--tile"><img src="assets/marks/wayneui.svg" width="46" height="46" alt=""></span>
+          <span class="route__name">WayneUI</span><span class="route__role">renders the page</span>
+        </li>
+      </ol>
+
+      <div class="key-plan" data-reveal>
+        <h3 class="key-plan__title">Key</h3>
+        <ul class="key-plan__list" role="list">
+          <li><span class="key-plan__icon key-plan__icon--tile"><img src="assets/marks/wayneui.svg" width="30" height="30" alt=""></span><span><b>WayneUI</b> the interface layer</span></li>
+          <li><img src="assets/marks/creed.png" width="40" height="40" alt=""><span><b>CREED</b> the shared rules and policy</span></li>
+          <li><img src="assets/marks/proctor.png" width="40" height="40" alt=""><span><b>PROCTOR</b> checks an app against the policy</span></li>
+          <li><img src="assets/marks/preflight.png" width="40" height="40" alt=""><span><b>PREFLIGHT</b> the shared CI components</span></li>
+          <li><img src="assets/marks/sesame.png" width="40" height="40" alt=""><span><b>SESAME</b> sign-in inside the app</span></li>
+          <li><img src="assets/marks/helmet.png" width="40" height="40" alt=""><span><b>HELMET</b> security headers and CSP reports</span></li>
+          <li><img src="assets/marks/pinstripe.png" width="40" height="40" alt=""><span><b>Pinstripe</b> the coding standard, pressed</span></li>
+          <li><img src="assets/marks/sourdough.png" width="40" height="40" alt=""><span><b>Sourdough</b> the starter that keeps the stack fed</span></li>
+          <li><img src="assets/marks/weld.png" width="40" height="40" alt=""><span><b>WELD</b> every part, already joined</span></li>
+          <li><img src="assets/marks/booster.png" width="40" height="40" alt=""><span><b>BOOSTER</b> keeps an app's PHP current</span></li>
+          <li><img src="assets/marks/rollcall.png" width="40" height="40" alt=""><span><b>ROLLCALL</b> every app answers "present"</span></li>
+          <li><img src="assets/marks/advisor.png" width="40" height="40" alt=""><span><b>ADVISOR</b> what applies, and what to do next</span></li>
+          <li><img src="assets/marks/squire.png" width="40" height="40" alt=""><span><b>SQUIRE</b> carries the release to Citadel</span></li>
+          <li class="key-plan__here"><img src="brand/drawbridge-avatar-256.png" width="40" height="40" alt=""><span><b>DRAWBRIDGE</b> the one SAML front door <em>you are here</em></span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================ A-801 revisions -->
+  <section class="sheet" aria-labelledby="rev-title">
+    <div class="wsu-container">
+      <header class="sheet__head" data-reveal>
+        <p class="sheet-tag"><span class="sheet-tag__no">A-801</span> Revision schedule</p>
+        <h2 id="rev-title">Drawn, not yet built</h2>
+        <p>Release 0.1 is the gateway, the config, the signer and the rig. What waits for 0.2 is listed in <code>OPEN_QUESTIONS.md</code>, with the safer default the code uses until then.</p>
+      </header>
+      <div class="wsu-table-wrap" data-reveal>
+        <table class="rev-table">
+          <caption class="wsu-sr-only">Planned revisions</caption>
+          <thead><tr><th scope="col">Rev</th><th scope="col">Item</th><th scope="col">Until then</th></tr></thead>
+          <tbody>
+            <tr><td><span class="delta">0.2</span></td><td>Single logout through the IdP</td><td>Logout ends the gateway session and returns to the same host.</td></tr>
+            <tr><td><span class="delta">0.2</span></td><td>Shared session store, more than one instance</td><td>One instance, sessions in memory; a restart signs everyone out.</td></tr>
+            <tr><td><span class="delta">0.2</span></td><td>Two signing keys at once, for rotation</td><td>One key, one <code>kid</code>; rotation is a short coordinated window.</td></tr>
+            <tr><td><span class="delta">0.2</span></td><td>Identity on public paths, if wanted</td><td>Public means no identity, ever.</td></tr>
+            <tr><td><span class="delta">0.2</span></td><td>Prometheus metrics, off by default</td><td>Logs to stdout and stderr.</td></tr>
+            <tr><td><span class="delta">0.2</span></td><td>The image published to a registry</td><td>Build it from the Dockerfile.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ======================================================== title block -->
+<footer class="title-block">
+  <div class="wsu-container">
+    <div class="title-block__grid">
+      <div class="tb tb--mark"><img src="brand/drawbridge-avatar-256.png" width="72" height="72" alt=""><span class="tb__project">DRAWBRIDGE</span></div>
+      <div class="tb"><span class="tb__k">Home</span><span class="tb__v">auth.apps.wayne.edu</span></div>
+      <div class="tb"><span class="tb__k">Scale</span><span class="tb__v">1 request : 1 assertion</span></div>
+      <div class="tb"><span class="tb__k">Checked</span><span class="tb__v"><code>composer ci</code></span></div>
+      <div class="tb"><span class="tb__k">Source</span><span class="tb__v"><a href="https://github.com/waynestate/drawbridge">github.com/<wbr>waynestate/<wbr>drawbridge</a></span></div>
+      <div class="tb"><span class="tb__k">Licence</span><span class="tb__v">MIT</span></div>
+      <div class="tb tb--joke"><span class="tb__v">Drawn, not quartered.</span></div>
+      <div class="tb tb--wide"><span class="tb__k">Drawn for</span><span class="tb__v">Wayne State University · Enterprise Applications</span></div>
+    </div>
+  </div>
+</footer>
+
+<div class="toast" role="status" aria-live="polite" data-toast></div>
+<script src="assets/drawbridge.js" defer></script>
+</body>
+</html>
