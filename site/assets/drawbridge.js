@@ -63,6 +63,12 @@
       "X-Auth-Request-Email: dean@"
     ];
 
+    // On a phone, frame the sheet tighter so the lettering stays readable.
+    var narrow = window.matchMedia("(max-width: 600px)");
+    var frame = function () { svg.setAttribute("viewBox", narrow.matches ? "112 76 528 424" : "0 0 640 500"); };
+    frame();
+    if (narrow.addEventListener) narrow.addEventListener("change", frame);
+
     visitor.removeAttribute("transform");
     placeVisitor(150, true);
     setAngle(0);
