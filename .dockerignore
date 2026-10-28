@@ -1,0 +1,6 @@
+vendor
+.git
+rig/.generated
+site
+build
+*.pem

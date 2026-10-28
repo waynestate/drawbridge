@@ -1,0 +1,9 @@
+* text=auto eol=lf
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+/tests export-ignore
+/rig export-ignore
+*.sh text eol=lf
+*.lua text eol=lf
+Dockerfile text eol=lf
