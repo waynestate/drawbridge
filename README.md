@@ -114,7 +114,7 @@ You need Docker. The PHP component needs PHP 8.3 or newer and Composer, but the 
 **Windows (PowerShell)**
 
 ```powershell
-git clone <this repo> drawbridge; cd drawbridge
+git clone https://github.com/waynestate/drawbridge.git; cd drawbridge
 docker run --rm -v "${PWD}:/app" -w /app composer:2.10.3 composer install --no-interaction
 Copy-Item .env.example .env
 Copy-Item config\drawbridge.example.yaml config\drawbridge.yaml
@@ -125,7 +125,7 @@ docker build -f docker/gateway/Dockerfile -t drawbridge-gateway .
 **Linux and macOS**
 
 ```sh
-git clone <this repo> drawbridge && cd drawbridge
+git clone https://github.com/waynestate/drawbridge.git && cd drawbridge
 docker run --rm -v "$PWD:/app" -w /app composer:2.10.3 composer install --no-interaction
 cp .env.example .env
 cp config/drawbridge.example.yaml config/drawbridge.yaml

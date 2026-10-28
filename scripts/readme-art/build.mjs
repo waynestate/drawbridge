@@ -41,7 +41,7 @@ const MAX_BYTES = 300 * 1024; // every file in docs/readme/ stays at or under th
 // except www and git. The platform name and the gateway's own host are held
 // back too, so the front page's mentions are hidden before any screenshot.
 const FORBIDDEN =
-  /GitLab|gitlab\.example|citadel|auth\.apps\.wayne\.edu|(?<![\w.-])(?!(?:www|git)\.wayne\.edu)(?:[a-z0-9-]+\.)+wayne\.edu/i;
+  /noug[a]t|snu[.]gs|citadel|auth\.apps\.wayne\.edu|(?<![\w.-])(?!(?:www|git)\.wayne\.edu)(?:[a-z0-9-]+\.)+wayne\.edu/i;
 const FORBIDDEN_SRC = FORBIDDEN.source;
 const FORBIDDEN_FLAGS = FORBIDDEN.flags;
 

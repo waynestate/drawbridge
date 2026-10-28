@@ -1,6 +1,10 @@
 {
     "name": "waynestate/drawbridge",
     "description": "The Citadel auth gateway: header policy, per-app path rules and a signed assertion signer for an Apache + mod_auth_openidc front door to Microsoft Entra ID.",
+    "homepage": "https://drawbridge.apps.wayne.edu/",
+    "support": {
+        "source": "https://github.com/waynestate/drawbridge"
+    },
     "type": "library",
     "license": "MIT",
     "authors": [
