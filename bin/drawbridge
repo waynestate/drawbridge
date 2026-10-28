@@ -1,0 +1,41 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+use Symfony\Component\Console\Application;
+use Waynestate\Drawbridge\Command\ExplainCommand;
+use Waynestate\Drawbridge\Command\KeysCommand;
+use Waynestate\Drawbridge\Command\MetadataCommand;
+use Waynestate\Drawbridge\Command\RenderCommand;
+use Waynestate\Drawbridge\Command\SignerMapCommand;
+use Waynestate\Drawbridge\Command\ValidateCommand;
+
+$autoload = null;
+
+foreach ([__DIR__.'/../vendor/autoload.php', __DIR__.'/../../../autoload.php'] as $candidate) {
+    if (is_file($candidate)) {
+        $autoload = $candidate;
+
+        break;
+    }
+}
+
+if ($autoload === null) {
+    fwrite(STDERR, "vendor/autoload.php not found. Run `composer install` first.\n");
+    exit(2);
+}
+
+require $autoload;
+
+$application = new Application('DRAWBRIDGE', '0.1.0-dev');
+$application->addCommands([
+    new ValidateCommand(),
+    new RenderCommand(),
+    new MetadataCommand(),
+    new KeysCommand(),
+    new ExplainCommand(),
+    new SignerMapCommand(),
+]);
+
+exit($application->run());

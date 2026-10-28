@@ -1,0 +1,65 @@
+# DRAWBRIDGE gateway config. Copy to drawbridge.yaml, edit, and check it with:
+#   bin/drawbridge config:validate --config=drawbridge.yaml
+#   bin/drawbridge explain app1.apps.wayne.edu /admin/users --config=drawbridge.yaml
+#
+# Nothing secret goes in this file. Keys, certificates and IdP metadata are files whose paths come from
+# DRAWBRIDGE_* environment variables (see .env.example).
+
+gateway:
+  # The "iss" claim. SESAME's gateway.issuer must match it exactly.
+  issuer: https://auth.apps.wayne.edu
+  # The SAML SP entity ID, registered once with the IdP for every app (see OPEN_QUESTIONS.md, I-6).
+  sp_entity_id: https://auth.apps.wayne.edu/_drawbridge/sso/metadata
+
+  # The header that carries the signed assertion. SESAME's default is X-Sesame-Assertion.
+  assertion_header: X-Sesame-Assertion
+  # Used only by apps with mode "headers" or "both".
+  user_header: X-Authenticated-User
+  attribute_headers:
+    email: X-Authenticated-Email
+    name: X-Authenticated-Name
+    affiliations: X-Authenticated-Affiliations
+
+  # How long an assertion is good for (5 to 300). Short: it is minted on every request.
+  assertion_ttl_seconds: 60
+  # Gateway session length per app host, in seconds (300 to 604800).
+  session_seconds: 28800
+  # Idle timeout in seconds (60 to 86400): a session unused this long ends.
+  session_idle_seconds: 3600
+  # Cookie name. With secure cookies on, the "__Host-" prefix is added for you.
+  session_cookie: drawbridge
+
+  # Which IdP attribute feeds each claim. NAME_ID is the SAML NameID.
+  attributes:
+    sub: NAME_ID
+    email: mail
+    name: displayName
+    affiliations: eduPersonAffiliation
+
+  # SAML AuthnContextClassRef -> the "amr" values SESAME's MFA check reads. The default map covers
+  # the standard classes; the real values Academica sends are an open question (OPEN_QUESTIONS.md, I-7).
+  # amr_map:
+  #   "https://refeds.org/profile/mfa": [mfa]
+
+  # Extra request headers to remove from every request, besides the built-in list. A name ending in "-" is a prefix.
+  strip_headers: []
+
+apps:
+  - id: app1
+    host: app1.apps.wayne.edu
+    # Where the app's container listens, as seen from the gateway. No path.
+    upstream: http://app1:8080
+    # "assertion" (default, a signed JWT), "headers" (plain headers, for apps that cannot verify a JWT yet), or "both".
+    mode: assertion
+    # What a path with no rule gets. "login" (default) is the safe choice.
+    default: login
+    # A path ending in "/" is a prefix ("/assets/" covers /assets and everything under it). Any other path is exact.
+    # No wildcards or regular expressions. Query strings are never part of the match.
+    public:
+      - /up
+      - /assets/
+    protected:
+      - /admin/
+    # Like protected, but an unauthenticated caller gets a 401 instead of a redirect to sign in.
+    api:
+      - /api/
