@@ -39,9 +39,35 @@ local function path_is_safe(raw)
   return true
 end
 
+local function has_prefix(name, prefixes)
+  for _, prefix in ipairs(prefixes) do
+    if name:sub(1, #prefix) == prefix then
+      return true
+    end
+  end
+  return false
+end
+
 function guard(r)
   if not path_is_safe(r.unparsed_uri or "") then
     return 400
+  end
+
+  -- Every header under an owned prefix goes, whatever comes after the prefix (an invented OIDC_CLAIM_isAdmin
+  -- too). headers_in_table gives a copy, so names are read from it and removed from the real table. Without it the
+  -- prefix rule cannot hold, so the request is refused rather than half guarded.
+  local listed = r.headers_in_table
+  if type(listed) == "function" then
+    listed = r:headers_in_table()
+  end
+  if type(listed) ~= "table" then
+    r:err("drawbridge: mod_lua has no headers_in_table; refusing the request")
+    return 500
+  end
+  for name, _ in pairs(listed) do
+    if has_prefix((name:lower():gsub("_", "-")), policy.strip_prefixes) then
+      r.headers_in[name] = nil
+    end
   end
 
   -- Apache's header table cannot be listed from Lua, so the generated list names every spelling to remove.
@@ -140,15 +166,6 @@ function stamp(r, context)
   end
 
   return apache2.AUTHZ_GRANTED
-end
-
-local function has_prefix(name, prefixes)
-  for _, prefix in ipairs(prefixes) do
-    if name:sub(1, #prefix) == prefix then
-      return true
-    end
-  end
-  return false
 end
 
 function scrub(r)

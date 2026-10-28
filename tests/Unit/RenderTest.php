@@ -206,6 +206,7 @@ final class RenderTest extends TestCase
         $this->assertStringContainsString('OIDCClientSecret "${DRAWBRIDGE_OIDC_CLIENT_SECRET}"', $conf);
         $this->assertStringContainsString('OIDCRedirectURI "/_drawbridge/oidc/callback"', $conf);
         $this->assertStringContainsString('OIDCScope "openid profile email"', $conf);
+        $this->assertStringContainsString('OIDCProviderTokenEndpointAuth client_secret_basic', $conf);
         $this->assertStringContainsString('OIDCRemoteUserClaim "preferred_username"', $conf);
         $this->assertStringContainsString('OIDCCacheEncrypt On', $conf);
         $this->assertSame(0, preg_match('/OIDC(ClientSecret|CryptoPassphrase) "(?!\$\{)/', $conf), 'a secret value was written into the config');
@@ -262,6 +263,7 @@ final class RenderTest extends TestCase
         $this->assertStringContainsString('cookies = { ["drawbridge"] = true, ["__Host-drawbridge"] = true }', $lua);
         $this->assertStringContainsString('cookie_prefixes = { "drawbridge_state_" }', $lua);
         $this->assertStringContainsString('claim_prefix = "OIDC_CLAIM_"', $lua);
+        $this->assertStringContainsString('strip_prefixes = { "x-authenticated-", "x-drawbridge-", "x-sesame-", "oidc-claim-" }', $lua);
         $this->assertStringContainsString('affiliations = "affiliations"', $lua);
     }
 

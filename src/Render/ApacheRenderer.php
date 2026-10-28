@@ -99,6 +99,9 @@ final class ApacheRenderer
             'OIDCClientID ' . $this->quote($oidc->clientId),
             'OIDCClientSecret ' . $this->quote('${' . $this->envName($oidc->clientSecretEnv) . '}'),
             'OIDCRedirectURI ' . $this->quote(self::REDIRECT_PATH),
+            // Said outright rather than read from discovery: Entra accepts it, and a provider document that names no
+            // method (as the rig's mock does) then cannot leave the choice open.
+            'OIDCProviderTokenEndpointAuth client_secret_basic',
             'OIDCScope "openid profile email"',
             'OIDCResponseType code',
             'OIDCPKCEMethod S256',
