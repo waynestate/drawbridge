@@ -1,0 +1,10 @@
+/vendor/
+/.phpunit.result.cache
+/.phpunit.cache/
+/.env
+# Keys and certificates are generated at test time and never committed.
+/rig/.generated/
+/build/
+*.pem
+*.key
+!*.example
