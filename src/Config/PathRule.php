@@ -9,15 +9,20 @@ namespace Waynestate\Drawbridge\Config;
  *
  * "/health" matches only "/health". "/admin/" matches "/admin" and everything
  * under "/admin/", but not "/administrator". There are no wildcards or
- * regular expressions on purpose (D46): the renderer builds the Apache
- * patterns from these literals, so nobody hand-writes a pattern that
- * quietly leaves a hole.
+ * regular expressions on purpose: the renderer builds the Apache patterns
+ * from these literals, so nobody hand-writes a pattern that quietly leaves
+ * a hole.
+ *
+ * A login or api rule may also name an Entra authentication context ("c1"
+ * to "c99"). The gateway asks Entra for it and lets the request through only
+ * when the ID token's "acrs" claim lists it.
  */
 final readonly class PathRule
 {
     public function __construct(
         public string $path,
         public Protection $protection,
+        public ?string $authContext = null,
     ) {}
 
     public function isPrefix(): bool

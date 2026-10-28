@@ -14,6 +14,7 @@ final readonly class Config
      */
     public function __construct(
         public GatewayConfig $gateway,
+        public OidcConfig $oidc,
         public array $apps,
     ) {}
 

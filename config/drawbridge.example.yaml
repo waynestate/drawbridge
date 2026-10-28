@@ -2,14 +2,12 @@
 #   bin/drawbridge config:validate --config=drawbridge.yaml
 #   bin/drawbridge explain app1.apps.wayne.edu /admin/users --config=drawbridge.yaml
 #
-# Nothing secret goes in this file. Keys, certificates and IdP metadata are files whose paths come from
-# DRAWBRIDGE_* environment variables (see .env.example).
+# Nothing secret goes in this file. The OpenID Connect client secret and crypto passphrase are environment
+# variables, and the assertion signing key is a mounted file (see .env.example).
 
 gateway:
-  # The "iss" claim. SESAME's gateway.issuer must match it exactly.
+  # The "iss" claim of the assertion DRAWBRIDGE signs. SESAME's gateway.issuer must match it exactly.
   issuer: https://auth.apps.wayne.edu
-  # The SAML SP entity ID, registered once with the IdP for every app (see OPEN_QUESTIONS.md, I-6).
-  sp_entity_id: https://auth.apps.wayne.edu/_drawbridge/sso/metadata
 
   # The header that carries the signed assertion. SESAME's default is X-Sesame-Assertion.
   assertion_header: X-Sesame-Assertion
@@ -29,20 +27,35 @@ gateway:
   # Cookie name. With secure cookies on, the "__Host-" prefix is added for you.
   session_cookie: drawbridge
 
-  # Which IdP attribute feeds each claim. NAME_ID is the SAML NameID.
-  attributes:
-    sub: NAME_ID
-    email: mail
-    name: displayName
-    affiliations: eduPersonAffiliation
-
-  # SAML AuthnContextClassRef -> the "amr" values SESAME's MFA check reads. The default map covers
-  # the standard classes; the real values Academica sends are an open question (OPEN_QUESTIONS.md, I-7).
-  # amr_map:
-  #   "https://refeds.org/profile/mfa": [mfa]
-
   # Extra request headers to remove from every request, besides the built-in list. A name ending in "-" is a prefix.
   strip_headers: []
+
+# The OpenID Connect provider: Microsoft Entra ID, one app registration for the whole gateway.
+oidc:
+  # Entra's v2.0 issuer: https://login.microsoftonline.com/<tenant-id>/v2.0 . The zeros are a placeholder, not a tenant.
+  issuer: https://login.microsoftonline.com/00000000-0000-0000-0000-000000000000/v2.0
+  # Defaults to <issuer>/.well-known/openid-configuration, which is right for Entra.
+  # metadata_url: https://login.microsoftonline.com/00000000-0000-0000-0000-000000000000/v2.0/.well-known/openid-configuration
+  # The app registration's Application (client) ID. A placeholder here.
+  client_id: 00000000-0000-0000-0000-000000000000
+  # The NAME of the environment variable that holds the client secret. Never the secret itself.
+  client_secret_env: DRAWBRIDGE_OIDC_CLIENT_SECRET
+
+  # The ID token claim that becomes "sub" (and X-Authenticated-User). preferred_username is Entra's default sign-in
+  # name. A deployment that wants the AccessID would add Entra's "alias" as an optional claim and set it here.
+  user_claim: preferred_username
+  # Which ID token claim feeds each attribute. Set one to null to never send it. affiliations has no default.
+  attribute_claims:
+    email: email
+    name: name
+  # ID token claims copied into the assertion under the same name when present (strings, numbers or lists of them).
+  # extra_claims: [wsuRoles]
+  extra_claims: []
+
+  # Entra "amr" values -> the "amr" values SESAME's MFA check reads. The default covers pwd, mfa, ngcmfa (as mfa),
+  # otp, rsa, wia and the REFEDS MFA URI. An unknown value gives no amr, never a guessed "mfa".
+  # amr_map:
+  #   mfa: [mfa]
 
 apps:
   - id: app1
@@ -60,6 +73,10 @@ apps:
       - /assets/
     protected:
       - /admin/
+      # A rule can also need an Entra authentication context (c1 to c99): the gateway asks Entra for it, and lets
+      # the request through only when the ID token's "acrs" lists it. Conditional Access decides what c1 means.
+      - path: /admin/payroll/
+        auth_context: c1
     # Like protected, but an unauthenticated caller gets a 401 instead of a redirect to sign in.
     api:
       - /api/

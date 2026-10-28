@@ -23,7 +23,45 @@ final class ConfigLoaderTest extends TestCase
         $this->assertSame(Protection::Login, $config->apps[0]->default);
         $this->assertSame('echo.apps.example.test', $config->apps[0]->audience);
         $this->assertSame('assertion', $config->apps[0]->mode);
-        $this->assertSame('NAME_ID', $config->gateway->attributes['sub']);
+        $this->assertSame('preferred_username', $config->oidc->userClaim);
+        $this->assertSame(['email' => 'email', 'name' => 'name', 'affiliations' => 'affiliations'], $config->oidc->attributeClaims);
+        $this->assertSame(['mfa'], $config->oidc->amrMap['mfa']);
+        $this->assertSame(Fixtures::OIDC_ISSUER . '/.well-known/openid-configuration', $config->oidc->metadataUrl);
+    }
+
+    public function testARuleCanNeedAnAuthenticationContext(): void
+    {
+        $app = Fixtures::config()->apps[0];
+
+        $this->assertSame('c1', $app->ruleFor('/admin/vault/x')?->authContext);
+        $this->assertNull($app->ruleFor('/admin/other')?->authContext);
+        $this->assertSame(Protection::Login, $app->protectionFor('/admin/vault/x'));
+        $this->assertSame('c2', $app->ruleFor('/api/vault/x')?->authContext);
+        $this->assertSame(Protection::Api, $app->protectionFor('/api/vault/x'));
+    }
+
+    public function testAnAffiliationsClaimIsOffUnlessConfigured(): void
+    {
+        $config = Fixtures::configArray();
+        unset($config['oidc']['attribute_claims']);
+
+        $this->assertArrayNotHasKey('affiliations', ConfigLoader::fromArray($config)->oidc->attributeClaims);
+    }
+
+    public function testAnAttributeCanBeSwitchedOff(): void
+    {
+        $config = Fixtures::configArray();
+        $config['oidc']['attribute_claims'] = ['name' => null];
+
+        $this->assertArrayNotHasKey('name', ConfigLoader::fromArray($config)->oidc->attributeClaims);
+    }
+
+    public function testAnHttpIssuerIsAcceptedOnlyForATestHost(): void
+    {
+        $config = Fixtures::configArray();
+        $config['oidc']['issuer'] = 'http://idp.test:8080/entra';
+
+        $this->assertSame('http://idp.test:8080/entra', ConfigLoader::fromArray($config)->oidc->issuer);
     }
 
     public function testTheExampleConfigIsValid(): void
@@ -174,11 +212,86 @@ final class ConfigLoaderTest extends TestCase
 
                 return $c;
             }, 'assertion_header'],
-            'unknown attribute' => [static function (array $c): array {
-                $c['gateway']['attributes']['role'] = 'x';
+            'a SAML-era key' => [static function (array $c): array {
+                $c['gateway']['sp_entity_id'] = 'https://auth.apps.example.test/metadata';
 
                 return $c;
-            }, '"role" is not one of sub, email, name, affiliations'],
+            }, '"sp_entity_id" is not a known key'],
+            'no oidc block' => [static function (array $c): array {
+                unset($c['oidc']);
+
+                return $c;
+            }, '"oidc" must be a map'],
+            'unknown oidc key' => [static function (array $c): array {
+                $c['oidc']['client_secret'] = 'oops';
+
+                return $c;
+            }, '"client_secret" is not a known key'],
+            'plain http issuer' => [static function (array $c): array {
+                $c['oidc']['issuer'] = 'http://login.microsoftonline.com/x/v2.0';
+
+                return $c;
+            }, 'must use https'],
+            'issuer with a query' => [static function (array $c): array {
+                $c['oidc']['issuer'] = 'https://login.example.test/?tenant=x';
+
+                return $c;
+            }, 'oidc.issuer'],
+            'no client id' => [static function (array $c): array {
+                unset($c['oidc']['client_id']);
+
+                return $c;
+            }, 'oidc.client_id'],
+            'no client secret env' => [static function (array $c): array {
+                unset($c['oidc']['client_secret_env']);
+
+                return $c;
+            }, 'oidc.client_secret_env'],
+            'a secret where the env name goes' => [static function (array $c): array {
+                $c['oidc']['client_secret_env'] = 'abc~DEF.ghi_123';
+
+                return $c;
+            }, 'oidc.client_secret_env'],
+            'a bad user claim' => [static function (array $c): array {
+                $c['oidc']['user_claim'] = 'preferred username';
+
+                return $c;
+            }, 'oidc.user_claim'],
+            'unknown attribute' => [static function (array $c): array {
+                $c['oidc']['attribute_claims']['role'] = 'x';
+
+                return $c;
+            }, '"role" is not one of email, name, affiliations'],
+            'an extra claim that the assertion owns' => [static function (array $c): array {
+                $c['oidc']['extra_claims'] = ['sub'];
+
+                return $c;
+            }, 'is a claim the assertion sets itself'],
+            'an amr map with a bad value' => [static function (array $c): array {
+                $c['oidc']['amr_map'] = ['mfa' => ['MFA!']];
+
+                return $c;
+            }, 'oidc.amr_map'],
+            'an auth context on a public path' => [static function (array $c): array {
+                $c['apps'][0]['public'][] = ['path' => '/open/', 'auth_context' => 'c1'];
+
+                return $c;
+            }, 'a public path cannot need an authentication context'],
+            'an auth context that is not c1 to c99' => [static function (array $c): array {
+                $c['apps'][0]['protected'][] = ['path' => '/x/', 'auth_context' => 'c100'];
+
+                return $c;
+            }, 'auth_context must be'],
+            'an unknown key in a rule' => [static function (array $c): array {
+                $c['apps'][0]['protected'][] = ['path' => '/x/', 'auth_contxt' => 'c1'];
+
+                return $c;
+            }, '"auth_contxt" is not a known key'],
+            'a rule map without a path' => [static function (array $c): array {
+                $c['apps'][0]['protected'][] = ['auth_context' => 'c1'];
+
+                return $c;
+            }, 'every path must be a non-empty string'],
         ];
     }
 
