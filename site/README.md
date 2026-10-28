@@ -14,8 +14,8 @@ from anywhere (Citadel, any web server, or `python -m http.server` inside `site/
   table wrapper, skip link, sr-only), then re-dressed in `assets/drawbridge.css`.
 - magic: the hero is section A–A through the gatehouse, with the mark in a detail callout ("1 · enlarged"). The
   sheet inks itself in, forged identity headers are thrown at the raised bridge and bounce off into the moat, then a
-  visitor signs in (a SAML round trip to the IdP, off this sheet, by others), the bridge comes down on its gold chain,
-  and the visitor walks through the guard, the SP and the signer, picking up a `drawbridge+jwt`. **Sign in / Sign
+  visitor signs in (an OpenID Connect round trip to Entra ID, off this sheet, by others), the bridge comes down on its gold chain,
+  and the visitor walks through the guard, the OpenID Connect client and the signer, picking up a `drawbridge+jwt`. **Sign in / Sign
   out** and **Forge a header** replay it; with the bridge down, a forgery walks in and is stripped by the guard.
 - door schedule: the path box runs the same matching as `src/Http/PathNormalizer.php` and `PathRule.php` in the
   browser, for the example config, and prints the real `drawbridge explain` wording (checked against the command).

@@ -219,7 +219,7 @@ path.visitor__ink{fill:none}
       </g>
       <g transform="translate(150 380)" class="an show-2_8-0_6"><circle cx="0" cy="-52" r="7" class="visitor__ink"/><path d="M0 -45 V-20 M0 -38 L-10 -26 M0 -38 L10 -26 M0 -20 L-8 0 M0 -20 L8 0" class="visitor__ink"/></g>
       <rect x="132" y="96" width="206" height="52" rx="4" class="idp__box an show-1_6-0_8"/>
-      <text x="235" y="119" class="anno idp-name an show-1_8-0_6" text-anchor="middle" style="font-size:19px;fill:#0c5449">the IdP (OIDC)</text>
+      <text x="235" y="119" class="anno idp-name an show-1_8-0_6" text-anchor="middle" style="font-size:19px;fill:#0c5449">Entra ID (OIDC)</text>
       <text x="235" y="140" class="anno an show-1_9-0_6" text-anchor="middle" style="font-size:15px">off this sheet, by others</text>
       <path d="M146 290 C118 236 132 184 190 152" marker-end="url(#arrow)" class="idp__trip an show-3_4-0_8"/><path d="M272 152 C300 196 236 250 166 292" marker-end="url(#arrow)" class="idp__trip idp__trip--back an show-3_4-0_8"/>
       <text x="128" y="404" class="anno an show-3_4-0_6">the approach</text>

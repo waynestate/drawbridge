@@ -8,7 +8,7 @@
 <meta name="stack-env" content="auto">
 <script src="assets/stack-env.js" defer></script>
 <title>DRAWBRIDGE — Comes down for signed-in people</title>
-<meta name="description" content="DRAWBRIDGE is the Citadel's SAML auth gateway at auth.apps.wayne.edu: one service provider in front of every app. It makes sure the visitor signed in, strips every identity header they brought along, and hands the app a short-lived ES256-signed assertion.">
+<meta name="description" content="DRAWBRIDGE is the auth gateway for WSU's container platform at auth.apps.wayne.edu: one OpenID Connect client, signed in through Microsoft Entra ID, in front of every app. It makes sure the visitor signed in, strips every identity header they brought along, and hands the app a short-lived ES256-signed assertion.">
 <meta name="theme-color" content="#f4f1ea">
 <meta name="color-scheme" content="light">
 <link rel="icon" href="brand/favicon.ico" sizes="any">
@@ -70,7 +70,7 @@
           <dd>The one way into the Citadel. It comes down only for people who are signed in, and goes back up for everyone else.</dd>
         </dl>
 
-        <p class="hero__blurb">One SAML service provider at <strong>auth.apps.wayne.edu</strong>, in front of every app on the platform. It makes sure the visitor has a session, throws away any identity header they tried to bring along, and hands the app a 60-second ES256-signed assertion that SESAME verifies.</p>
+        <p class="hero__blurb">One OpenID Connect client at <strong>auth.apps.wayne.edu</strong>, signed in through Microsoft Entra ID, in front of every app on the platform. It makes sure the visitor has a session, throws away any identity header they tried to bring along, and hands the app a 60-second ES256-signed assertion that SESAME verifies.</p>
 
         <p class="hero__cta">
           <a class="wsu-btn wsu-btn--primary wsu-btn--lg" href="#build-title">Build the gatehouse</a>
@@ -88,7 +88,7 @@
 
         <svg class="gate" viewBox="0 0 640 500" role="img" aria-labelledby="gate-title gate-desc">
           <title id="gate-title">Section through the DRAWBRIDGE gatehouse</title>
-          <desc id="gate-desc">An architect's section: a visitor stands on the approach bank, a moat lies between the bank and the gatehouse, and the drawbridge hangs from a gold chain. Inside the gatehouse are the header guard, the SAML service provider and the assertion signer; the passage leads to the app.</desc>
+          <desc id="gate-desc">An architect's section: a visitor stands on the approach bank, a moat lies between the bank and the gatehouse, and the drawbridge hangs from a gold chain. Inside the gatehouse are the header guard, the OpenID Connect client and the assertion signer; Entra ID, the identity provider, sits off the sheet; the passage leads to the app.</desc>
           <defs>
             <pattern id="hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
               <line x1="0" y1="0" x2="0" y2="7" class="hatch-line"/>
@@ -176,16 +176,16 @@
           </g>
           <g class="annos">
             <text class="anno anno--in" x="474" y="276" text-anchor="middle">guard</text>
-            <text class="anno anno--in" x="518" y="276" text-anchor="middle">SAML</text>
+            <text class="anno anno--in" x="518" y="276" text-anchor="middle">OIDC</text>
             <text class="anno anno--in" x="562" y="276" text-anchor="middle">sign</text>
             <text class="anno anno--small" x="128" y="404">the approach</text>
             <text class="anno anno--small" x="452" y="404">the Citadel →</text>
           </g>
 
-          <!-- the IdP: off this sheet, by others. Sign-in goes there and back. -->
+          <!-- the identity provider (Entra ID): off this sheet, by others. Sign-in goes there and back. -->
           <g class="idp">
             <rect class="idp__box" x="132" y="96" width="206" height="52" rx="4"/>
-            <text class="anno idp__name" x="235" y="119" text-anchor="middle">the IdP (SAML)</text>
+            <text class="anno idp__name" x="235" y="119" text-anchor="middle">Entra ID (OIDC)</text>
             <text class="anno anno--small idp__note" x="235" y="138" text-anchor="middle">off this sheet, by others</text>
             <path class="idp__trip" d="M146 290 C118 236 132 184 190 152" marker-end="url(#arrow)"/><path class="idp__trip idp__trip--back" d="M272 152 C300 196 236 250 166 292" marker-end="url(#arrow)"/>
           </g>
@@ -235,9 +235,9 @@
         </li>
         <li class="passage__room" style="--i:2">
           <span class="passage__no" aria-hidden="true">2</span>
-          <h3>Service provider</h3>
-          <p>One SAML SP for every app, one session cookie per app host. No session: off to sign in.</p>
-          <p class="passage__mod">mod_auth_mellon</p>
+          <h3>OpenID Connect client</h3>
+          <p>One client for every app, signed in through Entra ID, one session per app host. No session: off to Entra to sign in.</p>
+          <p class="passage__mod">mod_auth_openidc</p>
         </li>
         <li class="passage__room" style="--i:3">
           <span class="passage__no" aria-hidden="true">3</span>
@@ -272,7 +272,7 @@
         </div>
       </div>
 
-      <p class="margin-note" data-reveal>Why a moat and not a lock on every door: each app doing its own SAML is another chance to get XML signatures wrong. DRAWBRIDGE signs in once, in a maintained SP, and every app checks one small signed token.</p>
+      <p class="margin-note" data-reveal>Why a moat and not a lock on every door: each app doing its own OpenID Connect is another chance to get a nonce, a state check or a token signature wrong. DRAWBRIDGE signs in once, in a maintained module, and every app checks one small signed token.</p>
     </div>
   </section>
 
@@ -385,7 +385,7 @@
             <li><s>Forwarded</s></li>
             <li><s>X-Real-IP</s></li>
             <li><s>X-Auth-Request-*</s></li>
-            <li><s>Shib-Session-ID</s></li>
+            <li><s>OIDC-Claim-*</s></li>
             <li><s>Proxy</s></li>
           </ul>
           <p class="stripped__foot"><code>Connection</code> is trimmed to <code>close</code>, <code>keep-alive</code> and <code>upgrade</code>, so a client cannot ask the proxy to drop a header the gateway set.</p>
@@ -409,10 +409,10 @@
         <li><strong>Match the normalised path.</strong> Encoded slashes, backslashes, semicolons and bad UTF-8 are treated as protected.</li>
         <li><strong>Exact or prefix, nothing clever.</strong> The Apache pattern is built from the literal, never typed by hand.</li>
         <li><strong>Sign narrowly and briefly.</strong> ES256, a pinned <code>typ</code>, one audience per app, a fresh <code>jti</code> each time.</li>
-        <li><strong>Let the SP do SAML.</strong> DRAWBRIDGE writes no XML signature code. Tampered responses are refused.</li>
-        <li><strong>One cookie per app host.</strong> A session on one host opens no other.</li>
+        <li><strong>Let the module do OpenID Connect.</strong> DRAWBRIDGE writes no OAuth client. Forged callbacks and missing contexts are refused.</li>
+        <li><strong>One session per app host.</strong> A session cookie carried to another host opens nothing there.</li>
         <li><strong>Overwrite forwarded headers.</strong> <code>X-Forwarded-*</code> come from the gateway, never the client.</li>
-        <li><strong>Secrets stay out.</strong> Keys are mounted files. Logs carry a reason code, never a subject or a token.</li>
+        <li><strong>Secrets stay out.</strong> Keys are mounted files; the client secret and passphrase live in the environment. Logs carry a reason code, never a subject or a token.</li>
         <li><strong>Do not trust the network.</strong> The app verifies the signature even if only the gateway can reach it.</li>
         <li><strong>Run small and boring.</strong> Non-root, port above 1024, state under <code>/tmp</code>, logs to stdout.</li>
         <li><strong>Bounded dependencies.</strong> No <code>*</code>, no <code>dev-master</code>; <code>composer audit</code> runs in CI.</li>
@@ -444,7 +444,9 @@
 <span class="t-dim">PS&gt;</span> Copy-Item config\drawbridge.example.yaml config\drawbridge.yaml
 <span class="t-dim">PS&gt;</span> docker run --rm -v "${PWD}:/app" -w /app composer:2.10.3 php bin/drawbridge config:validate --config=config/drawbridge.yaml
 <span class="t-ok">The config is valid: 1 app(s).</span>
-<span class="t-ok"> - app1 (app1.apps.wayne.edu): default login, 4 path rule(s), mode assertion</span>
+<span class="t-ok">OpenID Connect provider: https://login.microsoftonline.com/&lt;tenant-id&gt;/v2.0</span>
+<span class="t-dim">   … client id, secret (set or not, never its value), claims, amr map</span>
+<span class="t-ok"> - app1 (app1.apps.wayne.edu): default login, 5 path rule(s), mode assertion, auth context: /admin/payroll/ c1</span>
 <span class="t-dim">PS&gt;</span> docker build -f docker/gateway/Dockerfile -t drawbridge-gateway .</pre>
               <button class="copy-btn" type="button" data-copy-from="#cmd-win">Copy</button>
             </div>
@@ -458,7 +460,9 @@
 <span class="t-dim">$</span> cp config/drawbridge.example.yaml config/drawbridge.yaml
 <span class="t-dim">$</span> docker run --rm -v "$PWD:/app" -w /app composer:2.10.3 php bin/drawbridge config:validate --config=config/drawbridge.yaml
 <span class="t-ok">The config is valid: 1 app(s).</span>
-<span class="t-ok"> - app1 (app1.apps.wayne.edu): default login, 4 path rule(s), mode assertion</span>
+<span class="t-ok">OpenID Connect provider: https://login.microsoftonline.com/&lt;tenant-id&gt;/v2.0</span>
+<span class="t-dim">   … client id, secret (set or not, never its value), claims, amr map</span>
+<span class="t-ok"> - app1 (app1.apps.wayne.edu): default login, 5 path rule(s), mode assertion, auth context: /admin/payroll/ c1</span>
 <span class="t-dim">$</span> docker build -f docker/gateway/Dockerfile -t drawbridge-gateway .</pre>
               <button class="copy-btn" type="button" data-copy-from="#cmd-nix">Copy</button>
             </div>
@@ -467,12 +471,12 @@
 
         <div class="build__side">
           <h3>Then raise it</h3>
-          <p>The entrypoint refuses to start until these are mounted, read-only. None of them is ever in git.</p>
+          <p>The entrypoint refuses to start without these: two files mounted read-only and two secrets in the environment. None of them is ever in git.</p>
           <ul class="mounts" role="list">
             <li><code>drawbridge.yaml</code> <span>the per-app config</span></li>
-            <li><code>idp-metadata.xml</code> <span>the IdP's SAML metadata</span></li>
-            <li><code>sp.key</code>, <code>sp.crt</code> <span>the SP's key pair; <code>sp:metadata</code> prints what to register</span></li>
             <li><code>signing.key</code> <span>the ES256 key; <code>keys:generate</code> makes one</span></li>
+            <li><code>DRAWBRIDGE_OIDC_CLIENT_SECRET</code> <span>the Entra client secret, from the app registration</span></li>
+            <li><code>DRAWBRIDGE_OIDC_CRYPTO_PASSPHRASE</code> <span>encrypts sessions; 32+ characters</span></li>
           </ul>
           <div class="term term--small">
 <pre class="term__body" tabindex="0"><span class="t-dim">$</span> docker run --rm -p 8080:8080 --env-file .env \
@@ -488,16 +492,15 @@
           <div><dt><code>config:validate</code></dt><dd>checks the config and prints every problem at once</dd></div>
           <div><dt><code>explain &lt;host&gt; &lt;path&gt;</code></dt><dd>says which rule applies, and why</dd></div>
           <div><dt><code>render</code></dt><dd>writes <code>apps.conf</code> and <code>policy.lua</code> for Apache</dd></div>
-          <div><dt><code>sp:metadata</code></dt><dd>one entity ID, one ACS per app host</dd></div>
           <div><dt><code>keys:generate</code></dt><dd>an ES256 key pair; refuses to overwrite</dd></div>
         </dl>
         <div class="checks">
           <div class="term term--small">
 <pre class="term__body" tabindex="0"><span class="t-dim">$</span> composer ci     <span class="t-dim"># manifest, unit tests, Pint, PHPStan level 8, composer audit</span>
-<span class="t-dim">PS&gt;</span> rig\run.ps1   <span class="t-dim"># the real image, a throwaway IdP and an echo app (Windows)</span>
+<span class="t-dim">PS&gt;</span> rig\run.ps1   <span class="t-dim"># the real image, a mock OpenID Connect provider and an echo app (Windows)</span>
 <span class="t-dim">$</span> sh rig/run.sh   <span class="t-dim"># the same rig on Linux and macOS</span></pre>
           </div>
-          <p>The rig covers login, public and protected paths, header spoofing, path tricks, tampered and unsolicited SAML, signature checks against SESAME's rules, and logout. Nothing in it reaches a real IdP.</p>
+          <p>The rig covers sign-in, public and protected paths, header spoofing (forged <code>OIDC_*</code> headers too), path tricks, forged callbacks, step-up to an authentication context, signature checks against SESAME's rules, and logout. Nothing in it reaches Entra.</p>
         </div>
       </div>
     </div>
@@ -547,7 +550,7 @@
           <li><img src="assets/marks/rollcall.png" width="40" height="40" alt=""><span><b><a class="part-link" href="https://rollcall.apps.wayne.edu/">ROLLCALL</a></b> every app answers "present"</span></li>
           <li><img src="assets/marks/advisor.png" width="40" height="40" alt=""><span><b><a class="part-link" href="https://advisor.apps.wayne.edu/">ADVISOR</a></b> what applies, and what to do next</span></li>
           <li><img src="assets/marks/squire.png" width="40" height="40" alt=""><span><b><a class="part-link" href="https://squire.apps.wayne.edu/">SQUIRE</a></b> carries the release to Citadel</span></li>
-          <li class="key-plan__here"><img src="brand/drawbridge-avatar-256.png" width="40" height="40" alt=""><span><b>DRAWBRIDGE</b> the one SAML front door <em>you are here</em></span></li>
+          <li class="key-plan__here"><img src="brand/drawbridge-avatar-256.png" width="40" height="40" alt=""><span><b>DRAWBRIDGE</b> the one OpenID Connect front door <em>you are here</em></span></li>
         </ul>
       </div>
     </div>
@@ -559,19 +562,18 @@
       <header class="sheet__head" data-reveal>
         <p class="sheet-tag"><span class="sheet-tag__no">A-801</span> Revision schedule</p>
         <h2 id="rev-title">Drawn, not yet built</h2>
-        <p>Release 0.1 is the gateway, the config, the signer and the rig. What waits for 0.2 is listed in <code>OPEN_QUESTIONS.md</code>, with the safer default the code uses until then.</p>
+        <p>Release 0.2 moves the chain to OpenID Connect with Entra ID; the gate, the guard, the signer and the rig stay. What waits is listed in <code>OPEN_QUESTIONS.md</code>, with the safer default the code uses until then.</p>
       </header>
       <div class="wsu-table-wrap" data-reveal>
         <table class="rev-table">
           <caption class="wsu-sr-only">Planned revisions</caption>
           <thead><tr><th scope="col">Rev</th><th scope="col">Item</th><th scope="col">Until then</th></tr></thead>
           <tbody>
-            <tr><td><span class="delta">0.2</span></td><td>Single logout through the IdP</td><td>Logout ends the gateway session and returns to the same host.</td></tr>
-            <tr><td><span class="delta">0.2</span></td><td>Shared session store, more than one instance</td><td>One instance, sessions in memory; a restart signs everyone out.</td></tr>
-            <tr><td><span class="delta">0.2</span></td><td>Two signing keys at once, for rotation</td><td>One key, one <code>kid</code>; rotation is a short coordinated window.</td></tr>
-            <tr><td><span class="delta">0.2</span></td><td>Identity on public paths, if wanted</td><td>Public means no identity, ever.</td></tr>
-            <tr><td><span class="delta">0.2</span></td><td>Prometheus metrics, off by default</td><td>Logs to stdout and stderr.</td></tr>
-            <tr><td><span class="delta">0.2</span></td><td>The image published to a registry</td><td>Build it from the Dockerfile.</td></tr>
+            <tr><td><span class="delta">next</span></td><td>Shared session store, more than one instance</td><td>One instance, sessions in its shared memory; a restart signs everyone out.</td></tr>
+            <tr><td><span class="delta">next</span></td><td>Bearer tokens on API paths</td><td>An <code>api</code> path without a session gets a plain 401.</td></tr>
+            <tr><td><span class="delta">next</span></td><td>Two signing keys at once, for rotation</td><td>One key, one <code>kid</code>; rotation is a short coordinated window.</td></tr>
+            <tr><td><span class="delta">next</span></td><td>Identity on public paths, if wanted</td><td>Public means no identity, ever.</td></tr>
+            <tr><td><span class="delta">next</span></td><td>Prometheus metrics, off by default</td><td>Logs to stdout and stderr.</td></tr>
           </tbody>
         </table>
       </div>

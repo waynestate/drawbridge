@@ -121,7 +121,7 @@
 
     async function signIn() {
       busy = true; signBtn.disabled = true;
-      say("Off to sign in at the IdP over SAML, and back with a session.");
+      say("Off to sign in with Entra ID over OpenID Connect, and back with a session.");
       fig.classList.add("is-saml");
       await wait(1500);
       fig.classList.remove("is-saml");
@@ -129,7 +129,7 @@
       say("Signed in. The drawbridge comes down.");
       await swing(0, 1900);
       if (motion) fig.classList.add("is-walking");
-      say("Across the bridge, past the guard and the SP. The signer mints a 60-second assertion for this request.");
+      say("Across the bridge, past the guard and the OpenID Connect client. The signer mints a 60-second assertion for this request.");
       placeVisitor(GUARD + 30);
       await wait(1300);
       fig.classList.add("is-inside");
