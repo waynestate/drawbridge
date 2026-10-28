@@ -119,7 +119,7 @@ if ($allowRaw !== null) {
 
 $allow = new IpAllowList($allowEntries);
 $gate = new MetricsGate($token !== null || $allowRaw !== null, $token, $allow);
-// counters: false — the endpoint is a separate, per-request process and
+// counters: false. The endpoint is a separate, per-request process and
 // cannot see the signer's in-memory counters, so it serves build info only
 // until a shared store (APCu or file) is wired to both.
 $endpoint = new MetricsEndpoint($gate, new Metrics(counters: false));

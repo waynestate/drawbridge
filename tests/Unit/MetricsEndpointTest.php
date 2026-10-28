@@ -17,7 +17,7 @@ final class MetricsEndpointTest extends TestCase
     {
         $gate = new MetricsGate($enabled, $token, new IpAllowList($allow));
 
-        // counters: false — the endpoint is a separate, per-request process and
+        // counters: false. The endpoint is a separate, per-request process and
         // cannot see the signer's in-memory counters, so it serves build info
         // only until a shared store is wired to both.
         return new MetricsEndpoint($gate, new Metrics(null, '1.2.3', false));
