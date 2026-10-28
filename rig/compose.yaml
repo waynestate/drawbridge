@@ -77,7 +77,7 @@ services:
     volumes:
       - ..:/app:ro
       - keys:/keys:ro
-    command: ["php", "vendor/bin/phpunit", "-c", "phpunit.e2e.xml.dist"]
+    command: ["php", "vendor/bin/phpunit", "-c", "phpunit.e2e.xml.dist", "--do-not-cache-result"]
 
 volumes:
   keys:
