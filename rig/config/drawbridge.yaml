@@ -3,15 +3,19 @@
 
 gateway:
   issuer: http://auth.apps.test
-  sp_entity_id: http://auth.apps.test/_drawbridge/sso/metadata
   assertion_ttl_seconds: 60
   session_seconds: 3600
   session_cookie: drawbridge
-  attributes:
-    sub: uid
-    email: mail
-    name: displayName
-    affiliations: eduPersonAffiliation
+
+oidc:
+  # The mock provider. Plain http is allowed only because the host ends in .test.
+  issuer: http://idp.test:8080/entra
+  client_id: drawbridge-rig
+  client_secret_env: DRAWBRIDGE_OIDC_CLIENT_SECRET
+  user_claim: preferred_username
+  attribute_claims:
+    affiliations: affiliations
+  extra_claims: [wsuRoles]
 
 apps:
   # The main case: a signed assertion, login required by default.
@@ -24,8 +28,12 @@ apps:
       - /admin/open
     protected:
       - /admin/
+      - path: /admin/vault/
+        auth_context: c1
     api:
       - /api/
+      - path: /api/vault/
+        auth_context: c1
 
   # An app that cannot verify a JWT yet: plain X-Authenticated-* headers.
   - id: legacy

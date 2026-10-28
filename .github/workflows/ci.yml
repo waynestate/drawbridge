@@ -17,7 +17,7 @@ jobs:
       ci-command: composer ci
 
   rig:
-    # The container rig: the real gateway image, a throwaway SAML IdP and an echo app. GitHub runners have Docker.
+    # The container rig: the real gateway image, a mock OpenID Connect provider and an echo app. GitHub runners have Docker.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

@@ -1,7 +1,13 @@
-# The DRAWBRIDGE test rig: the real gateway image, a throwaway SAML IdP and a tiny echo app, on one private network.
-# Run it with rig/run.sh (Linux, macOS) or rig/run.ps1 (Windows). Nothing in here reaches a real IdP or the internet.
+# The DRAWBRIDGE test rig: the real gateway image, a throwaway OpenID Connect provider and a tiny echo app, on one
+# private network. Run it with rig/run.sh (Linux, macOS) or rig/run.ps1 (Windows). Nothing in here reaches Entra or
+# the internet: the provider is mock-oauth2-server, which signs in anyone with whatever claims the test types in.
 
 name: drawbridge-rig
+
+x-rig-secrets: &rig-secrets
+  # Throwaway values for the rig only. The mock provider accepts any client secret; the passphrase just has to be long.
+  DRAWBRIDGE_OIDC_CLIENT_SECRET: rig-client-secret-not-a-real-one
+  DRAWBRIDGE_OIDC_CRYPTO_PASSPHRASE: rig-crypto-passphrase-0123456789abcdef
 
 services:
   keys:
@@ -13,24 +19,22 @@ services:
       - ./tools:/rig/tools:ro
 
   idp:
-    build: ./idp
-    depends_on:
-      keys:
-        condition: service_completed_successfully
-    volumes:
-      - keys:/keys:ro
+    # Pinned: a maintained mock provider (navikt/mock-oauth2-server). Its issuer is http://<host>/<issuer id>, here
+    # http://idp.test:8080/entra, and its interactive login form lets a test choose the user and the claims.
+    image: ghcr.io/navikt/mock-oauth2-server:6.1.3
+    environment:
+      SERVER_PORT: "8080"
+      JSON_CONFIG: '{"interactiveLogin": true, "httpServer": "NettyWrapper"}'
     networks:
       default:
         aliases: [idp.test]
 
-  idp-metadata:
+  idp-ready:
     image: drawbridge-gateway:rig
-    user: root
-    entrypoint: ["php", "/rig/tools/prepare.php", "metadata"]
+    entrypoint: ["php", "/rig/tools/prepare.php", "idp"]
     depends_on:
       - idp
     volumes:
-      - keys:/keys
       - ./tools:/rig/tools:ro
 
   echo:
@@ -42,19 +46,19 @@ services:
   gateway:
     image: drawbridge-gateway:rig
     depends_on:
-      idp-metadata:
+      keys:
+        condition: service_completed_successfully
+      idp-ready:
         condition: service_completed_successfully
       echo:
         condition: service_started
     environment:
+      <<: *rig-secrets
       DRAWBRIDGE_CONFIG: /rig/config/drawbridge.yaml
       DRAWBRIDGE_PUBLIC_SCHEME: http
       DRAWBRIDGE_PUBLIC_PORT: "8080"
       # Plain HTTP in the rig, so the Secure and __Host- cookie rules are off here. Production keeps them on.
       DRAWBRIDGE_COOKIE_SECURE: "false"
-      DRAWBRIDGE_IDP_METADATA_FILE: /keys/idp-metadata.xml
-      DRAWBRIDGE_SP_KEY_FILE: /keys/sp.key
-      DRAWBRIDGE_SP_CERT_FILE: /keys/sp.crt
       DRAWBRIDGE_SIGNING_KEY_FILE: /keys/signing.key
       DRAWBRIDGE_SIGNING_KEY_ID: rig-1
       DRAWBRIDGE_LOG_LEVEL: info
