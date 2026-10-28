@@ -8,10 +8,13 @@ use InvalidArgumentException;
 
 /**
  * Platform facts for one deploy: ports, file paths and switches. These come from environment variables,
- * never from the app config file, so the same config file works on Citadel, OpenShift, Coolify and raw Docker (ADR-0010).
+ * never from the app config file, so the same config file works on Citadel, OpenShift, Coolify and raw Docker.
  */
 final readonly class RenderOptions
 {
+    /** The environment variable that holds mod_auth_openidc's crypto passphrase. Apache reads it at start-up. */
+    public const CRYPTO_PASSPHRASE_ENV = 'DRAWBRIDGE_OIDC_CRYPTO_PASSPHRASE';
+
     /**
      * @param  list<string>  $trustedProxies  CIDR ranges of the proxies in front (HA-Proxy on Citadel). Empty: trust none.
      */
@@ -23,9 +26,6 @@ final readonly class RenderOptions
         public ?int $publicPort = null,
         public bool $secureCookies = true,
         public array $trustedProxies = [],
-        public string $idpMetadataFile = '/run/drawbridge/idp-metadata.xml',
-        public string $spKeyFile = '/run/drawbridge/sp.key',
-        public string $spCertFile = '/run/drawbridge/sp.crt',
         public string $signingKeyFile = '/run/drawbridge/signing.key',
         public string $signingKeyId = 'drawbridge-1',
         public string $phpBinary = '/usr/bin/php',
@@ -46,7 +46,7 @@ final readonly class RenderOptions
             }
         }
 
-        foreach ([$configFile, $outputDir, $idpMetadataFile, $spKeyFile, $spCertFile, $signingKeyFile, $signingKeyId, $phpBinary, $consoleBinary] as $value) {
+        foreach ([$configFile, $outputDir, $signingKeyFile, $signingKeyId, $phpBinary, $consoleBinary] as $value) {
             if (preg_match('#^[A-Za-z0-9_./:@+=-]+$#', $value) !== 1) {
                 throw new InvalidArgumentException("\"{$value}\" has characters that are not allowed in a path or key ID.");
             }
@@ -73,9 +73,6 @@ final readonly class RenderOptions
             publicPort: $publicPort === '' ? null : (int) $publicPort,
             secureCookies: strtolower($get('DRAWBRIDGE_COOKIE_SECURE', 'true')) !== 'false',
             trustedProxies: $proxies,
-            idpMetadataFile: $get('DRAWBRIDGE_IDP_METADATA_FILE', '/run/drawbridge/idp-metadata.xml'),
-            spKeyFile: $get('DRAWBRIDGE_SP_KEY_FILE', '/run/drawbridge/sp.key'),
-            spCertFile: $get('DRAWBRIDGE_SP_CERT_FILE', '/run/drawbridge/sp.crt'),
             signingKeyFile: $get('DRAWBRIDGE_SIGNING_KEY_FILE', '/run/drawbridge/signing.key'),
             signingKeyId: $get('DRAWBRIDGE_SIGNING_KEY_ID', 'drawbridge-1'),
             sessionCacheEntries: (int) $get('DRAWBRIDGE_SESSION_CACHE_ENTRIES', '1000'),

@@ -1,4 +1,4 @@
-# DRAWBRIDGE gateway image: Apache httpd + mod_auth_mellon (the SAML service provider) + mod_proxy + mod_lua,
+# DRAWBRIDGE gateway image: Apache httpd + mod_auth_openidc (the OpenID Connect relying party) + mod_proxy + mod_lua,
 # plus the small PHP component that signs the assertion. Build from the repository root:
 #   docker build -f docker/gateway/Dockerfile -t drawbridge .
 
@@ -12,10 +12,10 @@ RUN composer dump-autoload --no-dev --classmap-authoritative --no-interaction
 
 FROM debian:trixie-slim
 
-# apache2 2.4.x and libapache2-mod-auth-mellon 0.19.x come from Debian 13 and are patched by Debian's security
-# team. Rebuild the image regularly to pick those patches up (D37).
+# apache2 2.4.x and libapache2-mod-auth-openidc 2.4.x come from Debian 13 (trixie) and are patched by Debian's security
+# team. Rebuild the image regularly to pick those patches up.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends apache2 libapache2-mod-auth-mellon php-cli ca-certificates curl \
+    && apt-get install -y --no-install-recommends apache2 libapache2-mod-auth-openidc php-cli ca-certificates curl \
     && rm -rf /var/lib/apt/lists/* \
     && rm -rf /etc/apache2/sites-enabled /etc/apache2/conf-enabled /etc/apache2/mods-enabled
 

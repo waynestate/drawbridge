@@ -6,10 +6,8 @@ namespace Waynestate\Drawbridge\Tests\Unit;
 
 use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
-use Waynestate\Drawbridge\Assertion\KeyPair;
 use Waynestate\Drawbridge\Render\ApacheRenderer;
 use Waynestate\Drawbridge\Render\LuaPolicyRenderer;
-use Waynestate\Drawbridge\Render\MetadataRenderer;
 use Waynestate\Drawbridge\Render\RenderOptions;
 use Waynestate\Drawbridge\Tests\Support\Fixtures;
 
@@ -56,7 +54,7 @@ final class RenderTest extends TestCase
         $conf = (new ApacheRenderer())->render(Fixtures::config(), $this->options());
         $firstApp = (int) strpos($conf, '# App: echo');
         $nextApp = (int) strpos($conf, '# App: blog');
-        $endpoint = (int) strpos($conf, '<Location "/_drawbridge/sso">', $firstApp);
+        $endpoint = (int) strpos($conf, '<Location "/_drawbridge/oidc">', $firstApp);
         $lastRule = (int) strrpos(substr($conf, $firstApp, $nextApp - $firstApp), '<LocationMatch');
 
         $this->assertGreaterThan($lastRule + $firstApp, $endpoint);
@@ -66,9 +64,12 @@ final class RenderTest extends TestCase
     {
         $conf = (new ApacheRenderer())->render(Fixtures::config(), $this->options());
 
-        $this->assertStringContainsString('AuthType Mellon', $conf);
-        $this->assertStringContainsString('MellonEnable "auth"', $conf);
+        $this->assertStringContainsString('AuthType openid-connect', $conf);
+        $this->assertStringContainsString('OIDCUnAuthAction auth', $conf);
         $this->assertStringContainsString('Require valid-user', $conf);
+        $this->assertStringContainsString('OIDCPassClaimsAs environment none', $conf);
+        $this->assertStringContainsString('OIDCPassAccessToken Off', $conf);
+        $this->assertStringContainsString('OIDCPassRefreshToken Off', $conf);
         $this->assertStringContainsString('RewriteRule ^ - [R=503,L]', $conf);
         $this->assertStringContainsString('RequestHeader set X-Sesame-Assertion "%{DRAWBRIDGE_ASSERTION}e" env=DRAWBRIDGE_ASSERTION', $conf);
     }
@@ -80,17 +81,18 @@ final class RenderTest extends TestCase
         $block = substr($conf, $start, (int) strpos($conf, '</LocationMatch>', $start) - $start);
 
         $this->assertStringContainsString('Require all granted', $block);
+        $this->assertStringContainsString('OIDCUnAuthAction pass', $block);
         $this->assertStringNotContainsString('RequestHeader', $block);
         $this->assertStringNotContainsString('Require valid-user', $block);
     }
 
-    public function testApiPathsUseInfoModeSoTheyAnswer401NotARedirect(): void
+    public function testApiPathsAnswer401NotARedirect(): void
     {
         $conf = (new ApacheRenderer())->render(Fixtures::config(), $this->options());
         $start = (int) strpos($conf, '<LocationMatch "^/api(/|$)">');
         $block = substr($conf, $start, (int) strpos($conf, '</LocationMatch>', $start) - $start);
 
-        $this->assertStringContainsString('MellonEnable "info"', $block);
+        $this->assertStringContainsString('OIDCUnAuthAction 401', $block);
         $this->assertStringContainsString('Require valid-user', $block);
     }
 
@@ -99,10 +101,10 @@ final class RenderTest extends TestCase
         $secure = (new ApacheRenderer())->render(Fixtures::config(), $this->options(true));
         $insecure = (new ApacheRenderer())->render(Fixtures::config(), $this->options(false));
 
-        $this->assertStringContainsString('MellonVariable "__Host-drawbridge"', $secure);
-        $this->assertStringContainsString('MellonSecureCookie On', $secure);
-        $this->assertStringContainsString('MellonVariable "drawbridge"', $insecure);
-        $this->assertStringContainsString('MellonSecureCookie Off', $insecure);
+        $this->assertStringContainsString('OIDCCookie "__Host-drawbridge"', $secure);
+        $this->assertStringContainsString('OIDCCookie "drawbridge"', $insecure);
+        $this->assertStringContainsString('OIDCStateCookiePrefix "drawbridge_state_"', $secure);
+        $this->assertStringContainsString('OIDCCookieHTTPOnly On', $secure);
     }
 
     public function testTrustedProxiesAreOnlyTheConfiguredOnes(): void
@@ -176,35 +178,6 @@ final class RenderTest extends TestCase
         $this->assertStringContainsString('user_header = "X-Authenticated-User"', $lua);
     }
 
-    public function testMetadataListsOneAcsPerAppUnderOneEntityId(): void
-    {
-        $key = openssl_pkey_new(['private_key_type' => OPENSSL_KEYTYPE_RSA, 'private_key_bits' => 2048]);
-        $this->assertNotFalse($key);
-        $csr = openssl_csr_new(['commonName' => 'drawbridge-test'], $key);
-        $this->assertNotFalse($csr);
-        $cert = openssl_csr_sign($csr, null, $key, 1);
-        $this->assertNotFalse($cert);
-        openssl_x509_export($cert, $pem);
-
-        $xml = (new MetadataRenderer())->render(Fixtures::config(), (string) $pem);
-        $document = new \DOMDocument();
-        $document->loadXML($xml);
-        $xpath = new \DOMXPath($document);
-        $xpath->registerNamespace('md', 'urn:oasis:names:tc:SAML:2.0:metadata');
-
-        $this->assertSame('https://auth.apps.example.test/_drawbridge/sso/metadata', $document->documentElement?->getAttribute('entityID'));
-        $locations = [];
-
-        foreach ($xpath->query('//md:AssertionConsumerService') ?: [] as $node) {
-            $this->assertInstanceOf(\DOMElement::class, $node);
-            $locations[] = $node->getAttribute('Location');
-        }
-
-        $this->assertSame([
-            'https://echo.apps.example.test/_drawbridge/sso/postResponse',
-            'https://blog.apps.example.test/_drawbridge/sso/postResponse',
-        ], $locations);
-    }
 
     public function testEveryAppHostSharesTheSignerMapAndTheMapIsStartedOnce(): void
     {
@@ -220,21 +193,85 @@ final class RenderTest extends TestCase
     {
         $conf = (new ApacheRenderer())->render(Fixtures::config(), $this->options());
 
-        $this->assertStringContainsString("<RequireAll>\n            Require valid-user\n            Require drawbridge-stamp", $conf);
+        $this->assertStringContainsString("<RequireAll>\n            Require valid-user\n            Require drawbridge-stamp\n", $conf);
     }
 
-    public function testThePolicyScrubsMellonsRealCookieName(): void
+    public function testTheProviderBlockNamesTheSecretsButNeverHoldsThem(): void
     {
-        $lua = (new LuaPolicyRenderer())->render(Fixtures::config(), $this->options());
+        $conf = (new ApacheRenderer())->render(Fixtures::config(), $this->options());
 
-        $this->assertStringContainsString('["mellon-drawbridge"] = true', $lua);
-        $this->assertStringContainsString('["mellon-__Host-drawbridge"] = true', $lua);
+        $this->assertSame(1, substr_count($conf, 'OIDCProviderMetadataURL'));
+        $this->assertStringContainsString('OIDCProviderMetadataURL "' . Fixtures::OIDC_ISSUER . '/.well-known/openid-configuration"', $conf);
+        $this->assertStringContainsString('OIDCClientID "11111111-2222-3333-4444-555555555555"', $conf);
+        $this->assertStringContainsString('OIDCClientSecret "${DRAWBRIDGE_OIDC_CLIENT_SECRET}"', $conf);
+        $this->assertStringContainsString('OIDCRedirectURI "/_drawbridge/oidc/callback"', $conf);
+        $this->assertStringContainsString('OIDCScope "openid profile email"', $conf);
+        $this->assertStringContainsString('OIDCRemoteUserClaim "preferred_username"', $conf);
+        $this->assertStringContainsString('OIDCCacheEncrypt On', $conf);
+        $this->assertSame(0, preg_match('/OIDC(ClientSecret|CryptoPassphrase) "(?!\$\{)/', $conf), 'a secret value was written into the config');
     }
 
-    public function testMetadataRefusesANonCertificate(): void
+    public function testEveryAppHostHasItsOwnCryptoPassphrase(): void
     {
-        $this->expectException(\RuntimeException::class);
+        $conf = (new ApacheRenderer())->render(Fixtures::config(), $this->options());
 
-        (new MetadataRenderer())->render(Fixtures::config(), KeyPair::generate()['public']);
+        $this->assertStringContainsString('OIDCCryptoPassphrase "${DRAWBRIDGE_OIDC_CRYPTO_PASSPHRASE}|echo.apps.example.test"', $conf);
+        $this->assertStringContainsString('OIDCCryptoPassphrase "${DRAWBRIDGE_OIDC_CRYPTO_PASSPHRASE}|blog.apps.example.test"', $conf);
     }
+
+    public function testAnAuthContextRuleAsksForItAndRequiresIt(): void
+    {
+        $conf = (new ApacheRenderer())->render(Fixtures::config(), $this->options());
+        $start = (int) strpos($conf, '<LocationMatch "^/admin/vault(/|$)">');
+        $block = substr($conf, $start, (int) strpos($conf, '</LocationMatch>', $start) - $start);
+        $claims = rawurlencode('{"id_token":{"acrs":{"essential":true,"value":"c1"}}}');
+
+        $this->assertNotSame(0, $start);
+        $this->assertStringContainsString('OIDCPathAuthRequestParams "claims=' . $claims . '"', $block);
+        $this->assertStringContainsString('OIDCUnAutzAction auth', $block);
+        $this->assertStringContainsString('Require claim acrs:c1', $block);
+        $this->assertStringContainsString('Require drawbridge-stamp c1', $block);
+        $this->assertStringContainsString('drawbridge-signer', $block);
+    }
+
+    public function testAnApiAuthContextRuleAnswers401(): void
+    {
+        $conf = (new ApacheRenderer())->render(Fixtures::config(), $this->options());
+        $start = (int) strpos($conf, '<LocationMatch "^/api/vault(/|$)">');
+        $block = substr($conf, $start, (int) strpos($conf, '</LocationMatch>', $start) - $start);
+
+        $this->assertNotSame(0, $start);
+        $this->assertStringContainsString('OIDCUnAutzAction 401', $block);
+        $this->assertStringContainsString('Require claim acrs:c2', $block);
+    }
+
+    public function testRulesWithoutAContextDoNotAskForOne(): void
+    {
+        $conf = (new ApacheRenderer())->render(Fixtures::config(), $this->options());
+        $start = (int) strpos($conf, '<LocationMatch "^/admin(/|$)">');
+        $block = substr($conf, $start, (int) strpos($conf, '</LocationMatch>', $start) - $start);
+
+        $this->assertStringNotContainsString('OIDCPathAuthRequestParams', $block);
+        $this->assertStringNotContainsString('Require claim', $block);
+    }
+
+    public function testThePolicyScrubsTheSessionAndStateCookies(): void
+    {
+        $lua = (new LuaPolicyRenderer())->render(Fixtures::config());
+
+        $this->assertStringContainsString('cookies = { ["drawbridge"] = true, ["__Host-drawbridge"] = true }', $lua);
+        $this->assertStringContainsString('cookie_prefixes = { "drawbridge_state_" }', $lua);
+        $this->assertStringContainsString('claim_prefix = "OIDC_CLAIM_"', $lua);
+        $this->assertStringContainsString('affiliations = "affiliations"', $lua);
+    }
+
+    public function testThePolicyStripsOidcHeadersAnAttackerMightSend(): void
+    {
+        $lua = (new LuaPolicyRenderer())->render(Fixtures::config());
+
+        foreach (['"oidc_claim_sub"', '"oidc-claim-preferred_username"', '"oidc_access_token"', '"oidc_id_token_payload"', '"oidc_claim_wsuroles"'] as $name) {
+            $this->assertStringContainsString($name, $lua);
+        }
+    }
+
 }

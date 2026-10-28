@@ -6,7 +6,6 @@ declare(strict_types=1);
 use Symfony\Component\Console\Application;
 use Waynestate\Drawbridge\Command\ExplainCommand;
 use Waynestate\Drawbridge\Command\KeysCommand;
-use Waynestate\Drawbridge\Command\MetadataCommand;
 use Waynestate\Drawbridge\Command\RenderCommand;
 use Waynestate\Drawbridge\Command\SignerMapCommand;
 use Waynestate\Drawbridge\Command\ValidateCommand;
@@ -28,11 +27,10 @@ if ($autoload === null) {
 
 require $autoload;
 
-$application = new Application('DRAWBRIDGE', '0.1.0-dev');
+$application = new Application('DRAWBRIDGE', '0.2.0-dev');
 $application->addCommands([
     new ValidateCommand(),
     new RenderCommand(),
-    new MetadataCommand(),
     new KeysCommand(),
     new ExplainCommand(),
     new SignerMapCommand(),

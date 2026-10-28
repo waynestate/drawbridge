@@ -14,11 +14,13 @@ use Waynestate\Drawbridge\Config\ConfigLoader;
 use Waynestate\Drawbridge\Render\ApacheRenderer;
 use Waynestate\Drawbridge\Render\LuaPolicyRenderer;
 use Waynestate\Drawbridge\Render\RenderOptions;
+use Waynestate\Drawbridge\Render\RuntimeSecrets;
 
 /**
- * Validates the config, then writes the Apache virtual hosts and the Lua policy table.
+ * Validates the config and the two secrets Apache will read from the environment, then writes the Apache
+ * virtual hosts and the Lua policy table.
  *
- * Nothing is written unless the whole config is valid, so a bad edit leaves the
+ * Nothing is written unless the whole config is valid and both secrets are usable, so a bad edit leaves the
  * last good files in place and the container refuses to start (fail closed).
  */
 final class RenderCommand extends Command
@@ -47,6 +49,15 @@ final class RenderCommand extends Command
             return Command::FAILURE;
         } catch (InvalidArgumentException $e) {
             $output->writeln('<error>' . $e->getMessage() . '</error>');
+
+            return Command::FAILURE;
+        }
+
+        $problems = RuntimeSecrets::problems($config, RuntimeSecrets::fromProcess($config));
+
+        if ($problems !== []) {
+            $output->writeln('<error>' . implode("
+", $problems) . ' See OPEN_QUESTIONS.md, Missing configuration.</error>');
 
             return Command::FAILURE;
         }

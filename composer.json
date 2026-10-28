@@ -1,6 +1,6 @@
 {
     "name": "waynestate/drawbridge",
-    "description": "The Citadel auth gateway: header policy, per-app path rules and a signed assertion signer for an Apache + mod_auth_mellon SAML front.",
+    "description": "The Citadel auth gateway: header policy, per-app path rules and a signed assertion signer for an Apache + mod_auth_openidc front door to Microsoft Entra ID.",
     "type": "library",
     "license": "MIT",
     "authors": [
@@ -10,7 +10,6 @@
     ],
     "require": {
         "php": "^8.3",
-        "ext-dom": "*",
         "ext-openssl": "*",
         "lcobucci/jwt": "^5.6",
         "psr/clock": "^1.0",
