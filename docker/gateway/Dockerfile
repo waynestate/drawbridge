@@ -1,8 +1,13 @@
 # DRAWBRIDGE gateway image: Apache httpd + mod_auth_openidc (the OpenID Connect relying party) + mod_proxy + mod_lua,
 # plus the small PHP component that signs the assertion. Build from the repository root:
 #   docker build -f docker/gateway/Dockerfile -t drawbridge .
+# The optional --build-arg DRAWBRIDGE_SOURCE_URL / DRAWBRIDGE_REVISION / DRAWBRIDGE_VERSION fill the OCI labels;
+# the pipeline passes them, a local build may omit them.
 
-FROM composer:2.10.3 AS vendor
+# Base images are fully qualified (docker.io/library/...) because buildah enforces short-name resolution and
+# cannot prompt without a TTY, which is exactly the situation in a CI job. Docker resolves the short names to
+# the same references, so `docker build` behaves identically.
+FROM docker.io/library/composer:2.10.3 AS vendor
 WORKDIR /app
 COPY composer.json composer.lock ./
 RUN composer install --no-dev --no-interaction --no-progress --no-scripts --no-autoloader
@@ -10,7 +15,17 @@ COPY src ./src
 COPY bin ./bin
 RUN composer dump-autoload --no-dev --classmap-authoritative --no-interaction
 
-FROM debian:trixie-slim
+FROM docker.io/library/debian:trixie-slim
+
+# OCI labels. The pipeline passes the build args ($CI_PROJECT_URL, $CI_COMMIT_SHA, $CI_COMMIT_TAG); a local build
+# without them gets empty labels rather than a failure.
+ARG DRAWBRIDGE_SOURCE_URL=""
+ARG DRAWBRIDGE_REVISION=""
+ARG DRAWBRIDGE_VERSION=""
+LABEL org.opencontainers.image.source="$DRAWBRIDGE_SOURCE_URL" \
+    org.opencontainers.image.revision="$DRAWBRIDGE_REVISION" \
+    org.opencontainers.image.version="$DRAWBRIDGE_VERSION" \
+    org.opencontainers.image.licenses="MIT"
 
 # apache2 2.4.x and libapache2-mod-auth-openidc 2.4.x come from Debian 13 (trixie) and are patched by Debian's security
 # team. Rebuild the image regularly to pick those patches up.
