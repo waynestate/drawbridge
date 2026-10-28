@@ -7,7 +7,7 @@ namespace Waynestate\Drawbridge\Http;
 /**
  * Turns a raw request path into the one form the path rules match against.
  *
- * Drawbridge matches the decoded path and never the query string (D17, D46).
+ * Drawbridge matches the decoded path and never the query string.
  * Anything that could make the gateway and the app disagree about which
  * resource was asked for is refused here instead of being guessed at: an
  * encoded slash, a backslash, a NUL or other control byte, and a path
