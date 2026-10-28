@@ -1035,6 +1035,9 @@ h1, h2, h3 { color: var(--db-ink); }
   .token { grid-template-columns: minmax(0, 1fr); }
   .token__part pre { height: auto; }
   .checks { grid-template-columns: minmax(0, 1fr); }
+  /* On a phone, wrap commands rather than hide their tails off the edge. */
+  .term--copy .term__body,
+  .term--small .term__body { white-space: pre-wrap; overflow-wrap: anywhere; }
   .route { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 2rem; }
   .route__stop:nth-child(2)::after { display: none; }
   .title-block__grid { grid-template-columns: minmax(0, 1fr); }

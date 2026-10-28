@@ -283,6 +283,7 @@
         io.observe(svg);
       } else { play(); }
     } else {
+      setDown(true);
       fig.classList.add("is-inside");
       placeVisitor(548, true);
       say("Signed in: the bridge is down and the visitor is inside with a fresh assertion. Sign out to raise it, or forge a header to watch it get stripped.");
