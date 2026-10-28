@@ -12,6 +12,7 @@ use Waynestate\Drawbridge\Assertion\InvalidSigningRequest;
 use Waynestate\Drawbridge\Assertion\KeyPair;
 use Waynestate\Drawbridge\Assertion\SignerMap;
 use Waynestate\Drawbridge\Assertion\SigningRequest;
+use Waynestate\Drawbridge\Metrics\Metrics;
 use Waynestate\Drawbridge\Tests\Support\FixedClock;
 use Waynestate\Drawbridge\Tests\Support\Fixtures;
 
@@ -101,5 +102,25 @@ final class SignerMapTest extends TestCase
         } catch (InvalidSigningRequest $e) {
             $this->assertStringNotContainsString('secret-subject', $e->getMessage());
         }
+    }
+
+    public function testSigningCountersAreRecordedWhenMetricsAreGiven(): void
+    {
+        $keys = KeyPair::generate();
+        $metrics = new Metrics(null, '1.2.3');
+        $map = new SignerMap(
+            new AssertionSigner(Fixtures::config(), InMemory::plainText($keys['private']), 'k', FixedClock::at('2026-10-28 12:00:00 UTC')),
+            fopen('php://memory', 'w+'),
+            $metrics,
+        );
+
+        $map->handle(SigningRequest::toLine('echo.apps.example.test', self::idToken()));
+        $map->handle('garbage');
+
+        $output = $metrics->render();
+
+        $this->assertStringContainsString('drawbridge_signing_requests_total 2', $output);
+        $this->assertStringContainsString('drawbridge_assertions_signed_total 1', $output);
+        $this->assertStringContainsString('drawbridge_assertion_errors_total{reason="refused"} 1', $output);
     }
 }

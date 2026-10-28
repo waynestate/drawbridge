@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Waynestate\Drawbridge\Assertion;
 
 use Throwable;
+use Waynestate\Drawbridge\Metrics\Metrics;
 
 /**
  * The long-running side of Apache's RewriteMap "prg:" protocol.
@@ -23,21 +24,30 @@ final class SignerMap
 
     /**
      * @param  resource|null  $log  Where reason codes go; STDERR by default (Apache sends it to the error log).
+     * @param  Metrics|null  $metrics  Where signing counters go; off by default.
      */
     public function __construct(
         private readonly AssertionSigner $signer,
         private mixed $log = null,
+        private readonly ?Metrics $metrics = null,
     ) {
         $this->log ??= STDERR;
     }
 
     public function handle(string $line): string
     {
+        $this->metrics?->recordSigningRequest();
+
         try {
-            return $this->signer->sign(SigningRequest::fromLine($line));
+            $assertion = $this->signer->sign(SigningRequest::fromLine($line));
+            $this->metrics?->recordSignedAssertion();
+
+            return $assertion;
         } catch (InvalidSigningRequest $e) {
+            $this->metrics?->recordAssertionError('refused');
             $this->report('refused: ' . $e->getMessage());
         } catch (Throwable $e) {
+            $this->metrics?->recordAssertionError('failed');
             $this->report('failed: ' . $e::class);
         }
 

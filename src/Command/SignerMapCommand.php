@@ -15,6 +15,7 @@ use Waynestate\Drawbridge\Assertion\SignerMap;
 use Waynestate\Drawbridge\Clock\SystemClock;
 use Waynestate\Drawbridge\Config\ConfigException;
 use Waynestate\Drawbridge\Config\ConfigLoader;
+use Waynestate\Drawbridge\Metrics\Metrics;
 
 /**
  * The signer process Apache starts for its RewriteMap. Not for people to run by hand.
@@ -58,7 +59,11 @@ final class SignerMapCommand extends Command
             return Command::FAILURE;
         }
 
-        (new SignerMap($signer))->serve(STDIN, STDOUT);
+        // The signer keeps its signing counters in memory for its lifetime.
+        // To share them with a per-request /metrics endpoint, pass the same
+        // shared adapter (for example Prometheus\Storage\APCng) to both; see
+        // the README's Metrics section.
+        (new SignerMap($signer, null, new Metrics()))->serve(STDIN, STDOUT);
 
         return Command::SUCCESS;
     }

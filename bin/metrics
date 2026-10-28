@@ -1,0 +1,125 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+use Waynestate\Drawbridge\Metrics\BearerToken;
+use Waynestate\Drawbridge\Metrics\IpAllowList;
+use Waynestate\Drawbridge\Metrics\Metrics;
+use Waynestate\Drawbridge\Metrics\MetricsEndpoint;
+use Waynestate\Drawbridge\Metrics\MetricsGate;
+
+/**
+ * The DRAWBRIDGE /metrics endpoint.
+ *
+ * A thin, framework-free web script: point a web server (Apache mod_php, CGI,
+ * or FPM) at it for the /metrics path. It reads the request's bearer token and
+ * real client IP, asks the gate for a decision, and serves the metrics in the
+ * Prometheus text exposition format.
+ *
+ * Access is off by default. It is on when DRAWBRIDGE_METRICS_TOKEN (a bearer
+ * token) or DRAWBRIDGE_METRICS_ALLOW (a comma list of client IPs/CIDRs) is
+ * set. A request is served when it presents the token or comes from an
+ * allowed address; otherwise it gets 403, and a disabled or misconfigured
+ * endpoint gets 404.
+ *
+ * The client IP is REMOTE_ADDR (the real client address), never a
+ * client-supplied header, so a spoofed X-Forwarded-For cannot grant access.
+ */
+
+$autoload = null;
+
+foreach ([__DIR__ . '/../vendor/autoload.php', __DIR__ . '/../../../autoload.php'] as $candidate) {
+    if (is_file($candidate)) {
+        $autoload = $candidate;
+
+        break;
+    }
+}
+
+if ($autoload === null) {
+    http_response_code(500);
+    header('Content-Type: text/plain; charset=utf-8');
+    echo "vendor/autoload.php not found. Run `composer install` first.\n";
+    exit(1);
+}
+
+require $autoload;
+
+/**
+ * The Authorization header value, or null.
+ *
+ * Apache mod_php strips the Authorization header unless it is passed on
+ * (CGIPassAuth On, or a SetEnvIf that copies it to HTTP_AUTHORIZATION); the
+ * other sources cover CGI and the getallheaders() fallback.
+ */
+function drawbridge_metrics_authorization(): ?string
+{
+    $server = $_SERVER;
+
+    foreach (['HTTP_AUTHORIZATION', 'REDIRECT_HTTP_AUTHORIZATION'] as $key) {
+        if (isset($server[$key]) && is_string($server[$key]) && $server[$key] !== '') {
+            return $server[$key];
+        }
+    }
+
+    if (function_exists('getallheaders')) {
+        foreach (getallheaders() as $name => $value) {
+            if (is_string($name) && is_string($value) && strcasecmp($name, 'Authorization') === 0) {
+                return $value;
+            }
+        }
+    }
+
+    return null;
+}
+
+/**
+ * The real client IP, or an empty string.
+ */
+function drawbridge_metrics_client_ip(): string
+{
+    $ip = $_SERVER['REMOTE_ADDR'] ?? '';
+
+    return is_string($ip) ? $ip : '';
+}
+
+/**
+ * An environment variable, or null when it is unset or empty.
+ */
+function drawbridge_metrics_env(string $name): ?string
+{
+    $value = getenv($name);
+
+    if ($value === false || $value === '') {
+        return null;
+    }
+
+    return $value;
+}
+
+$token = drawbridge_metrics_env('DRAWBRIDGE_METRICS_TOKEN');
+$allowRaw = drawbridge_metrics_env('DRAWBRIDGE_METRICS_ALLOW');
+
+$allowEntries = [];
+if ($allowRaw !== null) {
+    foreach (explode(',', $allowRaw) as $entry) {
+        $entry = trim($entry);
+        if ($entry !== '') {
+            $allowEntries[] = $entry;
+        }
+    }
+}
+
+$allow = new IpAllowList($allowEntries);
+$gate = new MetricsGate($token !== null || $allowRaw !== null, $token, $allow);
+$endpoint = new MetricsEndpoint($gate, new Metrics());
+
+$response = $endpoint->handle(BearerToken::from(drawbridge_metrics_authorization()), drawbridge_metrics_client_ip());
+
+http_response_code($response->status);
+header('Content-Type: ' . $response->contentType);
+
+if ($response->body !== '') {
+    echo $response->body;
+}

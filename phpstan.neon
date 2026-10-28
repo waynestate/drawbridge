@@ -4,6 +4,7 @@ parameters:
     paths:
         - src
         - bin/drawbridge
+        - bin/metrics
     reportIgnoresWithoutComments: true
     reportUnmatchedIgnoredErrors: true
     phpVersion:
