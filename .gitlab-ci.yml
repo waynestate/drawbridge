@@ -39,7 +39,11 @@ gateway-image:publish:
     - buildah --storage-driver=vfs login -u "$CI_REGISTRY_USER" -p "$CI_JOB_TOKEN" "$CI_REGISTRY"
     - buildah --storage-driver=vfs bud --isolation=chroot --build-arg DRAWBRIDGE_SOURCE_URL="$CI_PROJECT_URL" --build-arg DRAWBRIDGE_REVISION="$CI_COMMIT_SHA" --build-arg DRAWBRIDGE_VERSION="$CI_COMMIT_TAG" -f docker/gateway/Dockerfile -t "$CI_REGISTRY_IMAGE/gateway:$CI_COMMIT_TAG" .
     - buildah --storage-driver=vfs push "$CI_REGISTRY_IMAGE/gateway:$CI_COMMIT_TAG" "docker://$CI_REGISTRY_IMAGE/gateway:$CI_COMMIT_TAG"
-    - 'buildah --storage-driver=vfs images --filter "reference=$CI_REGISTRY_IMAGE/gateway:$CI_COMMIT_TAG" --format "pushed digest: {{.Digest}}"'
+    # buildah images --format runs the string through a tabwriter that turns every space into a tab, so the
+    # template must contain no spaces or the digest is dropped (containers/common pkg/formats). Print the label
+    # separately and the bare digest with a space-free template.
+    - echo "Pushed gateway image digest:"
+    - 'buildah --storage-driver=vfs images --filter "reference=$CI_REGISTRY_IMAGE/gateway:$CI_COMMIT_TAG" --format "{{.Digest}}"'
 
 # The container rig needs a runner that can run Docker. It is manual until the GitLab runners are confirmed to allow
 # it (OPEN_QUESTIONS.md, C-4), so it never blocks a merge by failing to start.
