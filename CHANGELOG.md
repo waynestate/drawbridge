@@ -32,6 +32,9 @@ same signed assertion for SESAME; only the rope to the identity provider is new.
   parameter and requires it in the ID token's `acrs` array, sending a signed-in visitor without it back to step up
   (`api` paths answer 401).
 - Rig tests for step-up, forged callbacks and forged `OIDC_*` headers.
+- GitLab pipeline builds the gateway image with Buildah (unprivileged, pinned by tag and digest) on every merge
+  request and the default branch, and publishes it to the project's container registry when a tag is pushed
+  (`gateway:<tag>`, no `latest`). The image carries OCI labels (source, revision, version, licenses).
 
 ### Removed
 

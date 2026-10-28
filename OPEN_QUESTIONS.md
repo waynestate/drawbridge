@@ -25,7 +25,7 @@ Three sections: what we need answered, what has to be supplied before a real dep
 | C-1 | Can app containers reach each other's port directly? | platform team | how much the network protects as a second control | The gateway assumes they can. Apps must verify the signature (SESAME `gateway` driver). |
 | C-2 | Is an upgrade of the front HA-Proxy or its OS planned? | platform team | whether the gateway can sit behind it unchanged | The image is independent of the front proxy. `DRAWBRIDGE_TRUSTED_PROXIES` takes the front proxy's addresses. |
 | C-3 | Where does the gateway sit: Option A, B or C from the routing research? | platform team | the public routing and TLS design | Only the gateway container is built. Placement is configuration. |
-| C-4 | Who builds the image, runs it, and when? Do the GitLab runners allow Docker-in-Docker? | platform team | production rollout; the GitLab rig job | The GitHub rig job runs automatically. The GitLab rig job is manual and may fail: a Docker-in-Docker runner cannot mount the checkout into the test container the way `rig/run.sh` does. |
+| C-4 | Who builds the image, runs it, and when? Do the GitLab runners allow Docker-in-Docker? | platform team | production rollout; the GitLab rig job | The GitLab pipeline builds the image with Buildah (unprivileged) on every merge request and the default branch, and publishes it to the project's container registry when a tag is pushed; the build job is allowed to fail until the runners are confirmed. The GitHub rig job runs automatically. The GitLab rig job is manual and may fail: a Docker-in-Docker runner cannot mount the checkout into the test container the way `rig/run.sh` does. |
 | C-6 | Proxy and signer language. | decided | | Apache httpd + mod_auth_openidc + mod_proxy for the proxy and OpenID Connect client; a small PHP component for the signer, config validation and header policy. **Alternative recorded: a Go signer** (a single static binary replacing the PHP `prg:` process). It would cut the image size and start-up time. It was not chosen because PHP is the shared stack language and the signer is a short class on a maintained JWT library. Revisit if the PHP process shows up in profiling. |
 | C-7 | Key distribution and rotation: how do apps get the public key, and how does rotation overlap? | platform team; SESAME owner | rotation without downtime | One signing key, one `kid`. The public half is a file apps copy. Rotation needs the app side to accept two keys at once (SESAME's `gateway` driver takes one key today), so rotation currently means a short coordinated window. |
 
@@ -61,7 +61,7 @@ the files and the secrets.
 | `DRAWBRIDGE_TRUSTED_PROXIES` | the platform team (C-2, C-3) | empty (trust nobody) |
 | `DRAWBRIDGE_PUBLIC_SCHEME`, `DRAWBRIDGE_PUBLIC_PORT` | the platform team | `https`, empty |
 | TLS certificate for the app hosts | the platform team; terminated in front of the gateway | none (the image speaks HTTP behind the front proxy) |
-| Registry and runner details for building and publishing the image | the platform team (C-4) | none |
+| GitLab runner details for the image and rig jobs (the registry is the project's own container registry) | the platform team (C-4) | none |
 | GitHub and GitLab repository settings (badges, mirror) | repository owners | badge URLs in `README.md` are placeholders |
 
 ## Not verified against Entra
@@ -90,5 +90,4 @@ against the real tenant:
 | `jti` replay check in SESAME's `gateway` driver | SESAME is read-only here | SESAME release |
 | Prometheus metrics (off by default) | no Prometheus server exists yet | later |
 | Docker-in-Docker rig job on the GitLab runners | needs C-4; the GitLab job is manual | when C-4 is answered |
-| Build and publish the image to a registry | needs C-4 | later |
 | Release tag and GitHub release | tags and releases are not made from this build | when approved |

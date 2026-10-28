@@ -160,6 +160,25 @@ One app registration covers every app host. In the Entra admin center, under App
 6. **Authentication contexts** (only if a path uses `auth_context`): in Conditional Access, create the context
    (`c1` ...), and a policy that targets it with whatever it should demand.
 
+## Getting the image
+
+The pipeline builds the gateway image on every merge request and on the default branch, and publishes it to this
+project's GitLab container registry when a tag is pushed. The image is at `<this project's registry>/gateway:<tag>`
+(for example `<this project's registry>/gateway:0.2.0`). There is no `latest` tag: pin a release.
+
+```sh
+docker pull <this project's registry>/gateway:0.2.0
+```
+
+The publish job prints the digest it pushed. Verify the image you pulled against it:
+
+```sh
+docker inspect --format='{{index .RepoDigests 0}}' <this project's registry>/gateway:0.2.0
+```
+
+The image carries OCI labels (`org.opencontainers.image.source`, `.revision`, `.version`, `.licenses`) set from the
+pipeline's commit; a local `docker build` leaves them empty.
+
 ## Configuration
 
 One YAML (or PHP array) file declares the gateway, the OpenID Connect provider and each app.
