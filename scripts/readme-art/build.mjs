@@ -273,10 +273,17 @@ async function hideForbidden(page) {
           els.add(n.parentElement);
         }
       }
+      // Prose and boxed blocks go whole (display none, so the layout closes up
+      // and no sentence or box is left with a gap). Labels inside the drawing
+      // are hidden in place.
       for (const el of els) {
-        el.style.setProperty("transition", "none", "important");
-        el.style.setProperty("animation", "none", "important");
-        el.style.setProperty("visibility", "hidden", "important");
+        const inSvg = el.closest("svg");
+        const block = inSvg ? null : el.closest("dl") ?? el.closest("p, li, figcaption, td, blockquote");
+        const target = block ?? el;
+        target.style.setProperty("transition", "none", "important");
+        target.style.setProperty("animation", "none", "important");
+        if (block) target.style.setProperty("display", "none", "important");
+        else target.style.setProperty("visibility", "hidden", "important");
       }
       return els.size;
     },
