@@ -237,6 +237,15 @@ In Docker, with no local PHP:
 docker run --rm -v "${PWD}:/app" -w /app composer:2.10.3 sh -c "composer install --no-interaction && composer ci"
 ```
 
+The unit suite checks the assertion against a mirror of SESAME's `gateway` driver rules
+(`tests/Support/SesameContract.php`). To check it against the real driver instead, point `SESAME_PATH`
+at a SESAME checkout that has been installed (`composer install` in it) and run the integration suite;
+without it the suite skips, so `composer ci` stays green:
+
+```powershell
+docker run --rm -v "${PWD}:/app" -v "C:\path\to\sesame:/sesame:ro" -e SESAME_PATH=/sesame -w /app composer:2.10.3 sh -c "composer install --no-interaction && vendor/bin/phpunit --filter RealSesame"
+```
+
 The container rig runs the real gateway image with a mock OpenID Connect provider
 ([mock-oauth2-server](https://github.com/navikt/mock-oauth2-server), pinned) standing in for Entra, and a tiny echo
 app. It covers sign-in, public and protected paths, header spoofing (including forged `OIDC_*` headers), path tricks,

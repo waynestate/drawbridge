@@ -89,7 +89,6 @@ against the real tenant:
 | Two accepted signing keys / rotation overlap on the app side | SESAME is read-only here (C-7) | later |
 | `jti` replay check in SESAME's `gateway` driver | SESAME is read-only here | SESAME release |
 | Prometheus metrics (off by default) | no Prometheus server exists yet | later |
-| Test the signed token against the real SESAME `GatewayDriver` class | the e2e suite mirrors its checks (`tests/Support/SesameContract.php`) because SESAME is not installable from here; an optional test that runs the real class when `SESAME_PATH` is set was left out | later |
 | Docker-in-Docker rig job on the GitLab runners | needs C-4; the GitLab job is manual | when C-4 is answered |
 | Build and publish the image to a registry | needs C-4 | later |
 | Release tag and GitHub release | tags and releases are not made from this build | when approved |

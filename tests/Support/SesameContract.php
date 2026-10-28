@@ -25,7 +25,7 @@ use Psr\Clock\ClockInterface;
  * SignedWith (algorithm pinned), IssuedBy, PermittedFor and LooseValidAt with a
  * leeway, and requires iat, exp and a non-empty sub. This class repeats that
  * so the unit suite can prove the signer's output passes without needing the
- * SESAME checkout. The real driver is exercised too, by SesameGatewayDriverTest,
+ * SESAME checkout. The real driver is exercised too, by RealSesameTest,
  * whenever SESAME_PATH points at a SESAME checkout that has been installed.
  */
 final class SesameContract
