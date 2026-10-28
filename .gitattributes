@@ -7,3 +7,5 @@
 *.sh text eol=lf
 *.lua text eol=lf
 Dockerfile text eol=lf
+/docs/readme export-ignore
+/scripts/readme-art export-ignore
