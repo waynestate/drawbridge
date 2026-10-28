@@ -1,0 +1,42 @@
+# The test rig's gateway config: three apps behind one gateway, all pointing at the same echo container.
+# Hosts end in .test (reserved, never resolves on the real internet) and are Docker network aliases.
+
+gateway:
+  issuer: http://auth.apps.test
+  sp_entity_id: http://auth.apps.test/_drawbridge/sso/metadata
+  assertion_ttl_seconds: 60
+  session_seconds: 3600
+  session_cookie: drawbridge
+  attributes:
+    sub: uid
+    email: mail
+    name: displayName
+    affiliations: eduPersonAffiliation
+
+apps:
+  # The main case: a signed assertion, login required by default.
+  - id: echo
+    host: echo.apps.test
+    upstream: http://echo:8080
+    public:
+      - /up
+      - /assets/
+      - /admin/open
+    protected:
+      - /admin/
+    api:
+      - /api/
+
+  # An app that cannot verify a JWT yet: plain X-Authenticated-* headers.
+  - id: legacy
+    host: legacy.apps.test
+    upstream: http://echo:8080
+    mode: headers
+
+  # A public site with one protected corner.
+  - id: blog
+    host: blog.apps.test
+    upstream: http://echo:8080
+    default: public
+    protected:
+      - /wp-admin/

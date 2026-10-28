@@ -1,0 +1,83 @@
+# The DRAWBRIDGE test rig: the real gateway image, a throwaway SAML IdP and a tiny echo app, on one private network.
+# Run it with rig/run.sh (Linux, macOS) or rig/run.ps1 (Windows). Nothing in here reaches a real IdP or the internet.
+
+name: drawbridge-rig
+
+services:
+  keys:
+    image: drawbridge-gateway:rig
+    user: root
+    entrypoint: ["php", "/rig/tools/prepare.php", "keys"]
+    volumes:
+      - keys:/keys
+      - ./tools:/rig/tools:ro
+
+  idp:
+    build: ./idp
+    depends_on:
+      keys:
+        condition: service_completed_successfully
+    volumes:
+      - keys:/keys:ro
+    networks:
+      default:
+        aliases: [idp.test]
+
+  idp-metadata:
+    image: drawbridge-gateway:rig
+    user: root
+    entrypoint: ["php", "/rig/tools/prepare.php", "metadata"]
+    depends_on:
+      - idp
+    volumes:
+      - keys:/keys
+      - ./tools:/rig/tools:ro
+
+  echo:
+    image: php:8.4-cli
+    command: ["php", "-S", "0.0.0.0:8080", "/echo/index.php"]
+    volumes:
+      - ./echo:/echo:ro
+
+  gateway:
+    image: drawbridge-gateway:rig
+    depends_on:
+      idp-metadata:
+        condition: service_completed_successfully
+      echo:
+        condition: service_started
+    environment:
+      DRAWBRIDGE_CONFIG: /rig/config/drawbridge.yaml
+      DRAWBRIDGE_PUBLIC_SCHEME: http
+      DRAWBRIDGE_PUBLIC_PORT: "8080"
+      # Plain HTTP in the rig, so the Secure and __Host- cookie rules are off here. Production keeps them on.
+      DRAWBRIDGE_COOKIE_SECURE: "false"
+      DRAWBRIDGE_IDP_METADATA_FILE: /keys/idp-metadata.xml
+      DRAWBRIDGE_SP_KEY_FILE: /keys/sp.key
+      DRAWBRIDGE_SP_CERT_FILE: /keys/sp.crt
+      DRAWBRIDGE_SIGNING_KEY_FILE: /keys/signing.key
+      DRAWBRIDGE_SIGNING_KEY_ID: rig-1
+      DRAWBRIDGE_LOG_LEVEL: info
+    volumes:
+      - keys:/keys:ro
+      - ./config:/rig/config:ro
+    networks:
+      default:
+        aliases: [echo.apps.test, legacy.apps.test, blog.apps.test, auth.apps.test]
+
+  tester:
+    image: php:8.4-cli
+    profiles: [test]
+    depends_on:
+      gateway:
+        condition: service_healthy
+    working_dir: /app
+    environment:
+      RIG_KEYS: /keys
+    volumes:
+      - ..:/app:ro
+      - keys:/keys:ro
+    command: ["php", "vendor/bin/phpunit", "-c", "phpunit.e2e.xml.dist"]
+
+volumes:
+  keys:
