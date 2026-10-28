@@ -13,3 +13,19 @@ composer-ci:
   script:
     - composer install --no-interaction --no-progress --prefer-dist
     - composer ci
+
+# The container rig needs a runner that can run Docker. It is manual until GitLab's runners are confirmed to allow
+# it (OPEN_QUESTIONS.md, C-4), so it never blocks a merge by failing to start.
+rig:
+  stage: test
+  image: docker:27
+  services:
+    - docker:27-dind
+  variables:
+    DOCKER_TLS_CERTDIR: ""
+    DOCKER_HOST: tcp://docker:2375
+  when: manual
+  allow_failure: true
+  script:
+    - apk add --no-cache git
+    - sh rig/run.sh

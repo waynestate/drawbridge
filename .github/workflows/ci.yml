@@ -15,3 +15,10 @@ jobs:
     with:
       php-versions: '["8.3","8.4","8.5"]'
       ci-command: composer ci
+
+  rig:
+    # The container rig: the real gateway image, a throwaway SAML IdP and an echo app. GitHub runners have Docker.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: sh rig/run.sh

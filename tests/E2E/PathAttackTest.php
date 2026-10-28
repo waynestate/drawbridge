@@ -42,35 +42,35 @@ final class PathAttackTest extends RigTestCase
     #[DataProvider('targets')]
     public function testAnAnonymousVisitorNeverReachesTheApp(string $target): void
     {
-        $response = $this->raw(self::ECHO.':'.self::PORT, $target);
+        $response = $this->raw(self::ECHO . ':' . self::PORT, $target);
 
         // A redirect to sign in, a refusal, or a not-found are all fine. The app answering with its page is not.
-        $this->assertStringNotContainsString('server_vars', $response['body'], $target.' reached the app');
+        $this->assertStringNotContainsString('server_vars', $response['body'], $target . ' reached the app');
     }
 
     public function testTheExactPublicRuleStillWorks(): void
     {
-        $this->assertSame(200, $this->raw(self::ECHO.':'.self::PORT, '/admin/open')['status']);
-        $this->assertSame(200, $this->raw(self::ECHO.':'.self::PORT, '/assets/site.css')['status']);
-        $this->assertSame(200, $this->raw(self::ECHO.':'.self::PORT, '/up?next=/admin/')['status']);
+        $this->assertSame(200, $this->raw(self::ECHO . ':' . self::PORT, '/admin/open')['status']);
+        $this->assertSame(200, $this->raw(self::ECHO . ':' . self::PORT, '/assets/site.css')['status']);
+        $this->assertSame(200, $this->raw(self::ECHO . ':' . self::PORT, '/up?next=/admin/')['status']);
     }
 
     public function testAQueryStringDoesNotChangeWhichRuleApplies(): void
     {
-        $this->assertContains($this->raw(self::ECHO.':'.self::PORT, '/admin/other?/admin/open')['status'], [302, 303]);
-        $this->assertContains($this->raw(self::ECHO.':'.self::PORT, '/?/up')['status'], [302, 303]);
+        $this->assertContains($this->raw(self::ECHO . ':' . self::PORT, '/admin/other?/admin/open')['status'], [302, 303]);
+        $this->assertContains($this->raw(self::ECHO . ':' . self::PORT, '/?/up')['status'], [302, 303]);
     }
 
     public function testTheGatewaysOwnPathsAreNotProxiedToTheApp(): void
     {
-        $response = $this->raw(self::ECHO.':'.self::PORT, '/_drawbridge/nothing');
+        $response = $this->raw(self::ECHO . ':' . self::PORT, '/_drawbridge/nothing');
 
         $this->assertStringNotContainsString('server_vars', $response['body']);
     }
 
     public function testTheSpMetadataIsPublicAndIsOnlyThePublicHalf(): void
     {
-        $response = $this->raw(self::ECHO.':'.self::PORT, '/_drawbridge/sso/metadata');
+        $response = $this->raw(self::ECHO . ':' . self::PORT, '/_drawbridge/sso/metadata');
 
         $this->assertSame(200, $response['status']);
         $this->assertStringContainsString('EntityDescriptor', $response['body']);

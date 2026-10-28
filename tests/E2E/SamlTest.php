@@ -14,7 +14,7 @@ final class SamlTest extends RigTestCase
     public function testATamperedResponseDoesNotSignAnyoneIn(): void
     {
         $browser = $this->browser();
-        $browser->request('GET', 'http://'.self::ECHO.':'.self::PORT.'/');
+        $browser->request('GET', 'http://' . self::ECHO . ':' . self::PORT . '/');
 
         $form = $browser->getCrawler()->filter('input[name="username"]')->ancestors()->filter('form')->form([
             'username' => self::USER,
@@ -43,7 +43,7 @@ final class SamlTest extends RigTestCase
         $this->assertNotSame(200, $browser->getResponse()->getStatusCode(), 'a tampered response must not produce a page');
 
         $browser->followRedirects(true);
-        $browser->request('GET', 'http://'.self::ECHO.':'.self::PORT.'/admin/x');
+        $browser->request('GET', 'http://' . self::ECHO . ':' . self::PORT . '/admin/x');
         $this->assertStringContainsString('idp.test', $browser->getRequest()?->getUri() ?? '', 'still no session after the tampered response');
     }
 
@@ -51,7 +51,7 @@ final class SamlTest extends RigTestCase
     {
         $browser = $this->browser();
         $browser->followRedirects(false);
-        $browser->request('POST', 'http://'.self::ECHO.':'.self::PORT.'/_drawbridge/sso/postResponse', [
+        $browser->request('POST', 'http://' . self::ECHO . ':' . self::PORT . '/_drawbridge/sso/postResponse', [
             'SAMLResponse' => base64_encode('<not-saml/>'),
         ]);
 
@@ -63,13 +63,13 @@ final class SamlTest extends RigTestCase
         // No login was started from this browser, so there is nothing for a response to answer.
         $browser = $this->browser();
         $browser->followRedirects(false);
-        $browser->request('POST', 'http://'.self::ECHO.':'.self::PORT.'/_drawbridge/sso/postResponse', [
+        $browser->request('POST', 'http://' . self::ECHO . ':' . self::PORT . '/_drawbridge/sso/postResponse', [
             'SAMLResponse' => base64_encode('<samlp:Response xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol"/>'),
-            'RelayState' => 'http://'.self::ECHO.':'.self::PORT.'/admin/x',
+            'RelayState' => 'http://' . self::ECHO . ':' . self::PORT . '/admin/x',
         ]);
 
         $this->assertGreaterThanOrEqual(400, $browser->getResponse()->getStatusCode());
-        $this->assertSame([], $browser->getCookieJar()->allValues('http://'.self::ECHO.':'.self::PORT.'/'));
+        $this->assertSame([], $browser->getCookieJar()->allValues('http://' . self::ECHO . ':' . self::PORT . '/'));
     }
 
     public function testASessionCookieFromOneHostDoesNotWorkOnAnother(): void
@@ -78,7 +78,7 @@ final class SamlTest extends RigTestCase
         $this->login($browser, self::ECHO);
         $cookie = $this->cookieHeader($browser, self::ECHO);
 
-        $this->assertContains($this->raw('legacy.apps.test:'.self::PORT, '/', ['Cookie: '.$cookie])['status'], [302, 303]);
-        $this->assertContains($this->raw('blog.apps.test:'.self::PORT, '/wp-admin/x', ['Cookie: '.$cookie])['status'], [302, 303]);
+        $this->assertContains($this->raw('legacy.apps.test:' . self::PORT, '/', ['Cookie: ' . $cookie])['status'], [302, 303]);
+        $this->assertContains($this->raw('blog.apps.test:' . self::PORT, '/wp-admin/x', ['Cookie: ' . $cookie])['status'], [302, 303]);
     }
 }

@@ -206,6 +206,31 @@ final class RenderTest extends TestCase
         ], $locations);
     }
 
+    public function testEveryAppHostSharesTheSignerMapAndTheMapIsStartedOnce(): void
+    {
+        $conf = (new ApacheRenderer())->render(Fixtures::config(), $this->options());
+
+        // Without "Inherit" a virtual host cannot see the server-level map and every lookup quietly returns nothing.
+        $this->assertSame(1, substr_count($conf, 'RewriteMap drawbridge-signer'));
+        $this->assertSame(count(Fixtures::config()->apps), substr_count($conf, 'RewriteOptions Inherit'));
+        $this->assertStringContainsString("RewriteEngine On\nRewriteMap", $conf);
+    }
+
+    public function testSessionRequiringSectionsAskTheStampProviderToo(): void
+    {
+        $conf = (new ApacheRenderer())->render(Fixtures::config(), $this->options());
+
+        $this->assertStringContainsString("<RequireAll>\n            Require valid-user\n            Require drawbridge-stamp", $conf);
+    }
+
+    public function testThePolicyScrubsMellonsRealCookieName(): void
+    {
+        $lua = (new LuaPolicyRenderer())->render(Fixtures::config(), $this->options());
+
+        $this->assertStringContainsString('["mellon-drawbridge"] = true', $lua);
+        $this->assertStringContainsString('["mellon-__Host-drawbridge"] = true', $lua);
+    }
+
     public function testMetadataRefusesANonCertificate(): void
     {
         $this->expectException(\RuntimeException::class);

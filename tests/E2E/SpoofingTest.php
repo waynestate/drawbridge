@@ -54,7 +54,7 @@ final class SpoofingTest extends RigTestCase
 
         foreach ($vars as $name => $value) {
             if (preg_match('/^HTTP_(X_AUTHENTICATED_|X_SESAME_|X_DRAWBRIDGE_|REMOTE_USER|X_REMOTE_USER|X_AUTH_REQUEST_|X_REAL_IP|FORWARDED$)/', $name) === 1) {
-                $found[] = $name.'='.$value;
+                $found[] = $name . '=' . $value;
             }
         }
 
@@ -64,7 +64,7 @@ final class SpoofingTest extends RigTestCase
     #[DataProvider('spoofedHeaders')]
     public function testASpoofedHeaderNeverReachesAPublicPath(string $line): void
     {
-        $response = $this->raw(self::ECHO.':'.self::PORT, '/up', [$line]);
+        $response = $this->raw(self::ECHO . ':' . self::PORT, '/up', [$line]);
         $this->assertSame(200, $response['status']);
         $vars = $this->serverVars($this->json($response['body']));
 
@@ -82,20 +82,20 @@ final class SpoofingTest extends RigTestCase
 
         // The only gateway header the app may see is the assertion the gateway signed itself.
         $this->assertNotSame('aaa.bbb.ccc', $vars['HTTP_X_SESAME_ASSERTION'] ?? '');
-        $others = array_values(array_filter($this->leaked($vars), static fn (string $pair): bool => ! str_starts_with($pair, 'HTTP_X_SESAME_ASSERTION=')));
+        $others = array_values(array_filter($this->leaked($vars), static fn(string $pair): bool => ! str_starts_with($pair, 'HTTP_X_SESAME_ASSERTION=')));
         $this->assertSame([], $others, $line);
     }
 
     public function testASpoofedUserHeaderDoesNotLetAnAnonymousVisitorIn(): void
     {
-        $response = $this->raw(self::ECHO.':'.self::PORT, '/admin/x', ['X-Authenticated-User: admin', 'X-Sesame-Assertion: aaa.bbb.ccc', 'Remote-User: admin']);
+        $response = $this->raw(self::ECHO . ':' . self::PORT, '/admin/x', ['X-Authenticated-User: admin', 'X-Sesame-Assertion: aaa.bbb.ccc', 'Remote-User: admin']);
 
         $this->assertContains($response['status'], [302, 303]);
     }
 
     public function testASpoofedUserHeaderDoesNotLetAnAnonymousVisitorIntoAnApi(): void
     {
-        $this->assertSame(401, $this->raw(self::ECHO.':'.self::PORT, '/api/x', ['X-Authenticated-User: admin'])['status']);
+        $this->assertSame(401, $this->raw(self::ECHO . ':' . self::PORT, '/api/x', ['X-Authenticated-User: admin'])['status']);
     }
 
     public function testHeaderModeAppsGetTheGatewaysValueNotTheClients(): void
@@ -103,8 +103,8 @@ final class SpoofingTest extends RigTestCase
         $browser = $this->browser();
         $this->login($browser, 'legacy.apps.test');
 
-        $response = $this->raw('legacy.apps.test:'.self::PORT, '/', [
-            'Cookie: '.$this->cookieHeader($browser, 'legacy.apps.test'),
+        $response = $this->raw('legacy.apps.test:' . self::PORT, '/', [
+            'Cookie: ' . $this->cookieHeader($browser, 'legacy.apps.test'),
             'X-Authenticated-User: admin',
             'X_Authenticated_User: admin',
             'x-authenticated-email: admin@example.test',
@@ -118,7 +118,7 @@ final class SpoofingTest extends RigTestCase
 
     public function testForwardedForIsTheGatewaysViewNotTheClients(): void
     {
-        $response = $this->raw(self::ECHO.':'.self::PORT, '/up', ['X-Forwarded-For: 203.0.113.9, 198.51.100.1']);
+        $response = $this->raw(self::ECHO . ':' . self::PORT, '/up', ['X-Forwarded-For: 203.0.113.9, 198.51.100.1']);
         $vars = $this->serverVars($this->json($response['body']));
 
         $this->assertStringNotContainsString('203.0.113.9', $vars['HTTP_X_FORWARDED_FOR'] ?? '');
