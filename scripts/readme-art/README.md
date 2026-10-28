@@ -26,13 +26,13 @@ network. Same inputs, same outputs.
 
 ## What it makes
 
-- `docs/readme/hero.jpg`: the hero sheet, with the site header hidden.
+- `docs/readme/hero.jpg`: the hero sheet, with the site header hidden. Any element whose text names an internal host or the platform is hidden first, and the build fails if forbidden text is still visible.
 - `docs/readme/gatehouse.svg`: section A-A, detail 1 enlarged. It inks itself
   in, strikes out a forged header and labels the guard, the OpenID Connect
   client and the signer. It holds still for `prefers-reduced-motion: reduce`.
   Fonts are embedded; it sits on its own opaque sheet so it reads on light and
   dark pages.
-- `docs/readme/gallery.jpg`: a contact sheet of three existing mobile crops.
+- `docs/readme/gallery.jpg`: a contact sheet of three live phone-width crops.
 - `docs/readme/board.jpg`: the brand board, re-encoded.
 - `docs/readme/cast/*.png`: one 96x96 mark per stack part.
 - `docs/readme/badges/*.svg`: `php`, `licence` and `assertion`, made locally by

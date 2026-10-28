@@ -37,14 +37,13 @@ const outDir = path.join(repoRoot, "docs", "readme");
 const castDir = path.join(outDir, "cast");
 
 const MAX_BYTES = 300 * 1024; // every file in docs/readme/ stays at or under this
-const FORBIDDEN = /GitLab|gitlab\.example|citadel/i; // internal names never ship in art
-
-// The front page itself calls DRAWBRIDGE "the way into the Citadel" in plain
-// words (the platform's public name, not a host). The hero screenshot shows
-// that sentence, so the page-text check lets the bare word through and still
-// fails on anything host-shaped. Everything the generator composes itself is
-// held to the strict FORBIDDEN rule.
-const FORBIDDEN_PAGE = /GitLab|gitlab\.example|citadel(\.[a-z]|[-_/][a-z0-9])/i;
+// Internal names never ship in art: no internal hosts, and no *.wayne.edu host
+// except www and git. The platform name and the gateway's own host are held
+// back too, so the front page's mentions are hidden before any screenshot.
+const FORBIDDEN =
+  /GitLab|gitlab\.example|citadel|auth\.apps\.wayne\.edu|(?<![\w.-])(?!(?:www|git)\.wayne\.edu)(?:[a-z0-9-]+\.)+wayne\.edu/i;
+const FORBIDDEN_SRC = FORBIDDEN.source;
+const FORBIDDEN_FLAGS = FORBIDDEN.flags;
 
 const outputs = [];
 
@@ -260,9 +259,48 @@ async function openPage(browser) {
   return { context, page };
 }
 
+// Hide the smallest element around every text node that names something
+// forbidden (visibility, so the layout holds), then check that no visible text
+// still does. Screenshots are taken only after this.
+async function hideForbidden(page) {
+  const hidden = await page.evaluate(
+    ([src, flags]) => {
+      const re = new RegExp(src, flags);
+      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      const els = new Set();
+      for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+        if (re.test(n.nodeValue) && n.parentElement && !["SCRIPT", "STYLE"].includes(n.parentElement.tagName)) {
+          els.add(n.parentElement);
+        }
+      }
+      for (const el of els) {
+        el.style.setProperty("transition", "none", "important");
+        el.style.setProperty("animation", "none", "important");
+        el.style.setProperty("visibility", "hidden", "important");
+      }
+      return els.size;
+    },
+    [FORBIDDEN_SRC, FORBIDDEN_FLAGS],
+  );
+  console.log(`  hid ${hidden} element(s) naming a forbidden term`);
+}
+
 async function assertClean(page, selector, what) {
-  const text = await page.locator(selector).innerText();
-  if (FORBIDDEN_PAGE.test(text)) fail(`forbidden text matched ${FORBIDDEN_PAGE} in ${what}`);
+  const leaks = await page.evaluate(
+    ([sel, src, flags]) => {
+      const re = new RegExp(src, flags);
+      const root = document.querySelector(sel);
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+      const out = [];
+      for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+        const el = n.parentElement;
+        if (el && re.test(n.nodeValue) && getComputedStyle(el).visibility !== "hidden" && el.checkVisibility()) out.push(n.nodeValue.trim());
+      }
+      return out;
+    },
+    [selector, FORBIDDEN_SRC, FORBIDDEN_FLAGS],
+  );
+  if (leaks.length) fail(`forbidden text matched ${FORBIDDEN} in ${what}: ${leaks.join(" | ")}`);
 }
 
 /* ------------------------------------------------------------------ 5. hero */
@@ -273,6 +311,7 @@ async function buildHero(page) {
   await page.addStyleTag({
     content: ".site-header { display: none !important; }",
   });
+  await hideForbidden(page);
   await assertClean(page, ".sheet--hero", "hero");
   const png = await page.locator(".sheet--hero").screenshot();
   const jpg = await sharp(png).resize({ width: 1280 }).jpeg({ quality: 82, mozjpeg: true }).toBuffer();
@@ -755,14 +794,31 @@ async function buildGatehouse(page, facts) {
 
 /* -------------------------------------------------- 7. gallery and the board */
 
-// A contact sheet of three existing mobile crops, composed as a tiny HTML
-// page and screenshotted: the same page, three windows.
-async function buildGallery(page) {
+// A contact sheet of three live mobile windows onto the page (hero, the
+// longitudinal section, the general notes), screenshotted at phone width
+// after the forbidden mentions are hidden, then laid out on a gridded sheet.
+async function buildGallery(browser) {
   console.log("gallery:");
-  const crops = ["mobile-01-a101-hero.png", "mobile-04-a301-schedule.png", "mobile-05-a401-detail.png"];
-  for (const c of crops) {
-    if (!existsSync(path.join(siteDir, "screenshots", "sections", c))) fail(`missing crop ${c}`);
+  const ctx = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    deviceScaleFactor: 2,
+    reducedMotion: "reduce",
+  });
+  const mp = await ctx.newPage();
+  await mp.route(/^(?!file:|data:|about:)/, (route) => route.abort());
+  await mp.goto(pathToFileURL(path.join(siteDir, "index.html")).href, { waitUntil: "load" });
+  await mp.evaluate(() => document.fonts.ready);
+  await mp.addStyleTag({ content: ".site-header { display: none !important; }" });
+  await hideForbidden(mp);
+  const shots = [];
+  for (const sel of ["section[aria-labelledby=section-title]", ".sheet--notes", "section[aria-labelledby=build-title]"]) {
+    await assertClean(mp, sel, `gallery ${sel}`);
+    await mp.locator(sel).scrollIntoViewIfNeeded();
+    shots.push((await mp.locator(sel).screenshot()).toString("base64"));
   }
+  await ctx.close();
+
+  const page = await browser.newPage({ viewport: { width: 1400, height: 900 }, deviceScaleFactor: 2 });
   const html = `<!doctype html>
 <html lang="en">
 <head>
@@ -788,13 +844,13 @@ async function buildGallery(page) {
 </head>
 <body>
 <div class="sheet">
-${crops.map((c) => `  <img src="data:image/png;base64,${readFileSync(path.join(siteDir, "screenshots", "sections", c)).toString("base64")}" alt="">`).join("\n")}
+${shots.map((b) => `  <img src="data:image/png;base64,${b}" alt="">`).join("\n")}
 </div>
 </body>
 </html>`;
   await page.setContent(html, { waitUntil: "load" });
-  await page.evaluate(() => document.fonts.ready);
   const png = await page.locator(".sheet").screenshot();
+  await page.close();
   const jpg = await sharp(png).resize({ width: 1280 }).jpeg({ quality: 82, mozjpeg: true }).toBuffer();
   record("gallery.jpg", jpg);
 }
@@ -827,10 +883,7 @@ async function main() {
     await buildGatehouse(page, facts);
     await buildHero(page);
     await context.close();
-    const ctx2 = await browser.newContext({ viewport: { width: 1400, height: 900 }, deviceScaleFactor: 2 });
-    const p2 = await ctx2.newPage();
-    await buildGallery(p2);
-    await ctx2.close();
+    await buildGallery(browser);
   } finally {
     await browser.close();
   }

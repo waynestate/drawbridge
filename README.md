@@ -312,7 +312,7 @@ key, and the header `X-Sesame-Assertion`. Apps do not parse the token themselves
 <details>
 <summary><b>Sheets</b>: three windows onto the gatehouse</summary>
 <br>
-<div align="center"><img src="docs/readme/gallery.jpg" width="100%" alt="Three phone-width crops of the front page: the hero with the headline DRAWBRIDGE, the door schedule 'Which doors need a key' with its table of paths, and the assertion sheet 'What crosses the bridge' with the token's header and claims."></div>
+<div align="center"><img src="docs/readme/gallery.jpg" width="100%" alt="Three phone-width crops of the front page: the longitudinal section One request through the gatehouse with its first passage rooms, the general notes Thirteen rules each with a test, and the build sheet with the install commands."></div>
 </details>
 
 <details>
