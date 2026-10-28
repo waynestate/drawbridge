@@ -14,7 +14,7 @@ composer-ci:
     - composer install --no-interaction --no-progress --prefer-dist
     - composer ci
 
-# The container rig needs a runner that can run Docker. It is manual until GitLab's runners are confirmed to allow
+# The container rig needs a runner that can run Docker. It is manual until the GitLab runners are confirmed to allow
 # it (OPEN_QUESTIONS.md, C-4), so it never blocks a merge by failing to start.
 rig:
   stage: test
