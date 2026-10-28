@@ -36,7 +36,7 @@ gateway-image:publish:
   rules:
     - if: $CI_COMMIT_TAG
   script:
-    - buildah --storage-driver=vfs login -u "$CI_REGISTRY_USER" -p "$CI_JOB_TOKEN" "$CI_REGISTRY"
+    - echo "$CI_JOB_TOKEN" | buildah --storage-driver=vfs login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
     - buildah --storage-driver=vfs bud --isolation=chroot --build-arg DRAWBRIDGE_SOURCE_URL="$CI_PROJECT_URL" --build-arg DRAWBRIDGE_REVISION="$CI_COMMIT_SHA" --build-arg DRAWBRIDGE_VERSION="$CI_COMMIT_TAG" -f docker/gateway/Dockerfile -t "$CI_REGISTRY_IMAGE/gateway:$CI_COMMIT_TAG" .
     - buildah --storage-driver=vfs push "$CI_REGISTRY_IMAGE/gateway:$CI_COMMIT_TAG" "docker://$CI_REGISTRY_IMAGE/gateway:$CI_COMMIT_TAG"
     # buildah images --format runs the string through a tabwriter that turns every space into a tab, so the
