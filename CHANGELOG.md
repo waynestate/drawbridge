@@ -35,6 +35,11 @@ same signed assertion for SESAME; only the rope to the identity provider is new.
 - GitLab pipeline builds the gateway image with Buildah (unprivileged, pinned by tag and digest) on every merge
   request and the default branch, and publishes it to the project's container registry when a tag is pushed
   (`gateway:<tag>`, no `latest`). The image carries OCI labels (source, revision, version, licenses).
+- An off-by-default Prometheus `/metrics` endpoint (`bin/metrics`), on when `DRAWBRIDGE_METRICS_TOKEN` (bearer token)
+  or `DRAWBRIDGE_METRICS_ALLOW` (client IPs/CIDRs) is set; a disabled or misconfigured endpoint answers 404 and an
+  unauthorized request 403. Reports `drawbridge_build_info`, `drawbridge_signing_requests_total`,
+  `drawbridge_assertions_signed_total` and `drawbridge_assertion_errors_total{reason}`; labels carry no identity,
+  claim, or token.
 
 ### Removed
 

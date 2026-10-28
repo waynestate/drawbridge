@@ -248,6 +248,8 @@ of the match. A path with an encoded slash, a backslash, a semicolon, a control 
 | `DRAWBRIDGE_SESSION_CACHE_ENTRIES` | `1000` | entries in the shared-memory cache: sessions, nonces, provider metadata (minimum 10) |
 | `DRAWBRIDGE_RUN_DIR` | `/tmp/drawbridge` | scratch for rendered config, locks and the session cache |
 | `DRAWBRIDGE_LOG_LEVEL` | `warn` | Apache log level |
+| `DRAWBRIDGE_METRICS_TOKEN` | none | bearer token that may read `/metrics`; empty turns the endpoint off unless an allow list is set |
+| `DRAWBRIDGE_METRICS_ALLOW` | none | comma list of client IPs/CIDRs allowed to read `/metrics`; empty trusts no address |
 
 ## Commands
 
@@ -301,6 +303,44 @@ sh rig/run.sh        # Linux, macOS
 
 Point SESAME's `gateway` driver at DRAWBRIDGE: the same issuer, the app's host as the audience, the signing public
 key, and the header `X-Sesame-Assertion`. Apps do not parse the token themselves.
+
+## Metrics
+
+DRAWBRIDGE can expose a Prometheus `/metrics` endpoint, off by default. It is on when `DRAWBRIDGE_METRICS_TOKEN`
+(a bearer token) or `DRAWBRIDGE_METRICS_ALLOW` (a comma list of client IPs/CIDRs) is set, and a request is served
+when it presents the token or comes from an allowed address. A disabled or misconfigured endpoint answers 404 and an
+unauthorized request answers 403, so the route is never advertised and never served to a stranger. The client
+address is `REMOTE_ADDR` (the real client), never a client-supplied header, so a spoofed `X-Forwarded-For` cannot
+grant access, and the token is compared in constant time.
+
+Point a web server at `bin/metrics` for the path. In the rendered Apache config a location such as:
+
+```apache
+<Location "/metrics">
+    SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
+    ScriptAlias /metrics /opt/drawbridge/bin/metrics
+</Location>
+```
+
+serves it (the `SetEnvIf` passes the bearer token through; without it only the allow list works).
+
+The endpoint reports what the assertion signer actually observes:
+
+| Metric | Type | Meaning |
+|---|---|---|
+| `drawbridge_build_info{version}` | gauge | the gateway is up, and which version |
+| `drawbridge_signing_requests_total` | counter | signing requests the signer received (protected paths on apps that send assertions) |
+| `drawbridge_assertions_signed_total` | counter | assertions the signer signed |
+| `drawbridge_assertion_errors_total{reason}` | counter | signings refused or failed; `reason` is `refused`, `failed`, or `other` |
+
+Public requests and sign-in failures never reach the PHP side, so they are not counted here; mod_auth_openidc would
+need its own status or log scraping to expose those. Labels carry no identity, claim, or token, and the `reason`
+label is folded to a fixed set, so it stays low-cardinality.
+
+The counters live in the signer's memory. The endpoint is a separate, per-request process, so by default (the
+`InMemory` adapter) it reports build info and zeroed counters. To share the signer's live counters with the endpoint,
+pass the same shared adapter (for example `Prometheus\Storage\APCng`, which needs the APCu extension) to both;
+without a shared store, PHP's share-nothing model cannot see across processes.
 
 ## Documents
 
