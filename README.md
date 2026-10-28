@@ -1,6 +1,17 @@
+<div align="center">
+  <a href="site/index.html"><img src="docs/readme/hero.jpg" width="100%" alt="DRAWBRIDGE's front page: the headline DRAWBRIDGE in stencil capitals, 'Comes down for signed-in people.', and an architect's section A-A through a gatehouse with the DRAWBRIDGE mark in a detail callout."></a>
+</div>
+
 # DRAWBRIDGE
 
-[![GitHub CI](https://github.com/waynestate/drawbridge/actions/workflows/ci.yml/badge.svg)](https://github.com/waynestate/drawbridge/actions/workflows/ci.yml)
+<div align="center">
+  <img src="docs/readme/badges/php.svg" alt="php ^8.3">
+  <img src="docs/readme/badges/license.svg" alt="licence MIT">
+  <img src="docs/readme/badges/assertion.svg" alt="assertion ES256, 60 seconds">
+  <a href="https://github.com/waynestate/drawbridge/actions/workflows/ci.yml"><img src="https://github.com/waynestate/drawbridge/actions/workflows/ci.yml/badge.svg" alt="GitHub CI"></a>
+</div>
+
+**Comes down for signed-in people.**
 
 Checks: `composer ci` (the same command runs on GitLab and GitHub). The container rig has its own script, see "Run the checks".
 
@@ -47,6 +58,12 @@ browser --> Apache httpd (DRAWBRIDGE) --> app container
               |  mod_proxy        : forwards to the app
               `- PHP component    : validates the config, renders the Apache config, signs assertions (ES256)
 ```
+
+<div align="center">
+  <img src="docs/readme/gatehouse.svg" width="100%" alt="An architect's section through the gatehouse. 1, the guard: removes X-Authenticated-*, X-Drawbridge-*, X-Sesame-* and OIDC-Claim-* headers, and trims Connection to close, keep-alive and upgrade. 2, the OpenID Connect client: response type code, PKCE S256, callback /_drawbridge/oidc/callback, claims kept in the environment. 3, the signer: a drawbridge+jwt signed with ES256, good for 60 seconds, sent as X-Sesame-Assertion; if it cannot sign, the answer is 503. A door schedule: /up and /assets/ public, /admin/ and anything else login, /api/ api.">
+  <br>
+  <sub>Detail 1, enlarged: the three rooms of the passage, labelled from the source. The drawing inks itself in, and holds still if you have asked your system for less motion.</sub>
+</div>
 
 - A request for a **protected** path without a session is redirected to Entra (authorization code flow with PKCE).
   For an **api** path it gets a plain 401, so a script is never handed an HTML login page. A **public** path passes
@@ -292,6 +309,18 @@ key, and the header `X-Sesame-Assertion`. Apps do not parse the token themselves
 - `CHANGELOG.md`: what changed.
 - `site/`: the front page, a static sheet set for the gatehouse (`site/index.html`; see `site/README.md`).
 
+<details>
+<summary><b>Sheets</b>: three windows onto the gatehouse</summary>
+<br>
+<div align="center"><img src="docs/readme/gallery.jpg" width="100%" alt="Three phone-width crops of the front page: the hero with the headline DRAWBRIDGE, the door schedule 'Which doors need a key' with its table of paths, and the assertion sheet 'What crosses the bridge' with the token's header and claims."></div>
+</details>
+
+<details>
+<summary><b>The brand board</b>: the mark, lockups, palette and type</summary>
+<br>
+<div align="center"><img src="docs/readme/board.jpg" width="100%" alt="DRAWBRIDGE's brand board: the gatehouse mark on a Wayne State green tile, its lockups, the palette of green, gold and cream, the type, favicons and clear space."></div>
+</details>
+
 ## The name
 
 It is a drawbridge, so it goes up on strangers and down on friends. If you find a header it should have caught,
@@ -300,3 +329,24 @@ raise the issue. The moat is only as good as the people who keep reporting where
 ## Licence
 
 MIT. Copyright Wayne State University.
+
+<div align="center"><b>Same castle, every sheet</b><br><sub>WayneUI and the stack. DRAWBRIDGE minds the gate.</sub></div>
+
+<div align="center">
+  <a href="https://github.com/waynestate/wayne-ui" title="WayneUI"><img src="docs/readme/cast/wayneui.png" width="40" alt="WayneUI"></a>
+  <a href="https://github.com/waynestate/creed" title="CREED"><img src="docs/readme/cast/creed.png" width="40" alt="CREED"></a>
+  <a href="https://github.com/waynestate/proctor" title="PROCTOR"><img src="docs/readme/cast/proctor.png" width="40" alt="PROCTOR"></a>
+  <a href="https://github.com/waynestate/sesame" title="SESAME"><img src="docs/readme/cast/sesame.png" width="40" alt="SESAME"></a>
+  <a href="https://github.com/waynestate/helmet" title="HELMET"><img src="docs/readme/cast/helmet.png" width="40" alt="HELMET"></a>
+  <a href="https://github.com/waynestate/sourdough" title="Sourdough"><img src="docs/readme/cast/sourdough.png" width="40" alt="Sourdough"></a>
+  <a href="https://github.com/waynestate/squire" title="SQUIRE"><img src="docs/readme/cast/squire.png" width="40" alt="SQUIRE"></a>
+  <a href="https://github.com/waynestate/preflight" title="PREFLIGHT"><img src="docs/readme/cast/preflight.png" width="40" alt="PREFLIGHT"></a>
+  <a href="https://github.com/waynestate/pinstripe" title="Pinstripe"><img src="docs/readme/cast/pinstripe.png" width="40" alt="Pinstripe"></a>
+  <a href="https://github.com/waynestate/booster" title="BOOSTER"><img src="docs/readme/cast/booster.png" width="40" alt="BOOSTER"></a>
+  <a href="https://github.com/waynestate/rollcall" title="ROLLCALL"><img src="docs/readme/cast/rollcall.png" width="40" alt="ROLLCALL"></a>
+  <a href="https://github.com/waynestate/drawbridge" title="DRAWBRIDGE"><img src="docs/readme/cast/drawbridge.png" width="40" alt="DRAWBRIDGE"></a>
+  <a href="https://github.com/waynestate/advisor" title="ADVISOR"><img src="docs/readme/cast/advisor.png" width="40" alt="ADVISOR"></a>
+  <a href="https://github.com/waynestate/weld" title="WELD"><img src="docs/readme/cast/weld.png" width="40" alt="WELD"></a>
+</div>
+
+<div align="center"><sub>Images are regenerated from the front page and the source by <a href="scripts/readme-art/README.md"><code>scripts/readme-art</code></a>. Drawn, not quartered.</sub></div>
