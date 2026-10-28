@@ -1,6 +1,6 @@
 # DRAWBRIDGE
 
-[![GitLab pipeline](https://gitlab.example/enterprise-apps/drawbridge/badges/main/pipeline.svg)](https://gitlab.example/enterprise-apps/drawbridge/-/pipelines) [![GitHub CI](https://github.com/waynestate/drawbridge/actions/workflows/ci.yml/badge.svg)](https://github.com/waynestate/drawbridge/actions/workflows/ci.yml)
+[![GitHub CI](https://github.com/waynestate/drawbridge/actions/workflows/ci.yml/badge.svg)](https://github.com/waynestate/drawbridge/actions/workflows/ci.yml)
 
 Checks: `composer ci` (the same command runs on GitLab and GitHub). The container rig has its own script, see "Run the checks".
 
