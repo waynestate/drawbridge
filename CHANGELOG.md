@@ -37,9 +37,10 @@ same signed assertion for SESAME; only the rope to the identity provider is new.
   (`gateway:<tag>`, no `latest`). The image carries OCI labels (source, revision, version, licenses).
 - An off-by-default Prometheus `/metrics` endpoint (`bin/metrics`), on when `DRAWBRIDGE_METRICS_TOKEN` (bearer token)
   or `DRAWBRIDGE_METRICS_ALLOW` (client IPs/CIDRs) is set; a disabled or misconfigured endpoint answers 404 and an
-  unauthorized request 403. Reports `drawbridge_build_info`, `drawbridge_signing_requests_total`,
-  `drawbridge_assertions_signed_total` and `drawbridge_assertion_errors_total{reason}`; labels carry no identity,
-  claim, or token.
+  unauthorized request 403. Reports `drawbridge_build_info`; the assertion-signing counters
+  (`drawbridge_signing_requests_total`, `drawbridge_assertions_signed_total`,
+  `drawbridge_assertion_errors_total{reason}`) are kept in the signer for in-process use and are not registered on
+  the endpoint until a shared store lets it see the signer's counters; labels carry no identity, claim, or token.
 
 ### Removed
 

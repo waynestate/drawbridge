@@ -324,23 +324,24 @@ Point a web server at `bin/metrics` for the path. In the rendered Apache config 
 
 serves it (the `SetEnvIf` passes the bearer token through; without it only the allow list works).
 
-The endpoint reports what the assertion signer actually observes:
+The endpoint serves only what it can see truthfully:
 
 | Metric | Type | Meaning |
 |---|---|---|
 | `drawbridge_build_info{version}` | gauge | the gateway is up, and which version |
-| `drawbridge_signing_requests_total` | counter | signing requests the signer received (protected paths on apps that send assertions) |
-| `drawbridge_assertions_signed_total` | counter | assertions the signer signed |
-| `drawbridge_assertion_errors_total{reason}` | counter | signings refused or failed; `reason` is `refused`, `failed`, or `other` |
 
-Public requests and sign-in failures never reach the PHP side, so they are not counted here; mod_auth_openidc would
-need its own status or log scraping to expose those. Labels carry no identity, claim, or token, and the `reason`
-label is folded to a fixed set, so it stays low-cardinality.
+The assertion-signing counters (`drawbridge_signing_requests_total`, `drawbridge_assertions_signed_total`,
+`drawbridge_assertion_errors_total{reason}`) are kept in the signer for in-process use but are not registered on the
+endpoint until a shared store lets it see the signer's counters; a counter that is always zero is not shown. Apache,
+not PHP, serves the requests, so request counts by path class are not exposed here either, and public requests and
+sign-in failures never reach the PHP side; mod_auth_openidc would need its own status or log scraping to expose
+those. Labels carry no identity, claim, or token, and the `reason` label is folded to a fixed set, so it stays
+low-cardinality.
 
 The counters live in the signer's memory. The endpoint is a separate, per-request process, so by default (the
-`InMemory` adapter) it reports build info and zeroed counters. To share the signer's live counters with the endpoint,
-pass the same shared adapter (for example `Prometheus\Storage\APCng`, which needs the APCu extension) to both;
-without a shared store, PHP's share-nothing model cannot see across processes.
+`InMemory` adapter) it reports build info only. To share the signer's live counters with the endpoint, pass the same
+shared adapter (for example `Prometheus\Storage\APCng`, which needs the APCu extension) to both; without a shared
+store, PHP's share-nothing model cannot see across processes.
 
 ## Documents
 

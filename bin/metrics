@@ -25,6 +25,12 @@ use Waynestate\Drawbridge\Metrics\MetricsGate;
  *
  * The client IP is REMOTE_ADDR (the real client address), never a
  * client-supplied header, so a spoofed X-Forwarded-For cannot grant access.
+ *
+ * The endpoint serves only what it can see truthfully: drawbridge_build_info.
+ * The assertion-signing counters live in the signer's memory, and this is a
+ * separate, per-request process, so it registers no counters until a shared
+ * store lets it see the signer's counters; a counter that is always zero is
+ * not shown.
  */
 
 $autoload = null;
@@ -113,7 +119,10 @@ if ($allowRaw !== null) {
 
 $allow = new IpAllowList($allowEntries);
 $gate = new MetricsGate($token !== null || $allowRaw !== null, $token, $allow);
-$endpoint = new MetricsEndpoint($gate, new Metrics());
+// counters: false — the endpoint is a separate, per-request process and
+// cannot see the signer's in-memory counters, so it serves build info only
+// until a shared store (APCu or file) is wired to both.
+$endpoint = new MetricsEndpoint($gate, new Metrics(counters: false));
 
 $response = $endpoint->handle(BearerToken::from(drawbridge_metrics_authorization()), drawbridge_metrics_client_ip());
 

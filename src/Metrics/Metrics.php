@@ -17,8 +17,8 @@ use Prometheus\Storage\InMemory;
  *
  * Framework-free: this class knows nothing about Apache, mod_auth_openidc, or
  * any web framework. It builds a CollectorRegistry, registers the DRAWBRIDGE
- * build-info gauge and the assertion-signing counters, and renders the result
- * in the Prometheus text exposition format.
+ * build-info gauge and (optionally) the assertion-signing counters, and
+ * renders the result in the Prometheus text exposition format.
  *
  * The counters record what the assertion signer actually observes: the signing
  * requests it receives (protected paths on apps that send assertions), the
@@ -30,10 +30,10 @@ use Prometheus\Storage\InMemory;
  * The default storage adapter is InMemory, which is correct for a request
  * scope: each request builds its own registry and renders it once. The signer
  * is a long-running process, so it keeps its counters in memory for its
- * lifetime. To share counters between the signer and a per-request /metrics
- * endpoint, pass the same shared adapter (for example
- * Prometheus\Storage\APCng) to both; without one, the endpoint reports build
- * info and zeroed counters.
+ * lifetime. The per-request /metrics endpoint registers no counters until a
+ * shared store (for example Prometheus\Storage\APCng) lets it see the signer's
+ * counters; without one it reports build info only, never a counter that is
+ * always zero.
  */
 final class Metrics
 {
@@ -55,20 +55,26 @@ final class Metrics
 
     private RenderTextFormat $renderer;
 
-    private Counter $signingRequests;
+    private ?Counter $signingRequests = null;
 
-    private Counter $signedAssertions;
+    private ?Counter $signedAssertions = null;
 
-    private Counter $assertionErrors;
+    private ?Counter $assertionErrors = null;
 
     /**
      * @param Adapter|null $storage  The storage adapter. Defaults to InMemory.
      * @param string|null $version  The DRAWBRIDGE version for the build-info
      *        metric. Defaults to the installed package version.
+     * @param bool $counters  Whether to register the assertion-signing
+     *        counters. The signer passes true (its in-process counters); the
+     *        per-request /metrics endpoint passes false until a shared store
+     *        lets it see the signer's counters, so it never shows a counter
+     *        that is always zero.
      */
     public function __construct(
         ?Adapter $storage = null,
         ?string $version = null,
+        bool $counters = true,
     ) {
         // registerDefaultMetrics is false: promphp's default php_info gauge
         // would duplicate the PHP version that drawbridge_build_info already
@@ -78,22 +84,24 @@ final class Metrics
 
         $this->registerBuildInfo($version ?? $this->installedVersion());
 
-        $this->signingRequests = $this->registry->registerCounter(
-            self::NAMESPACE,
-            'signing_requests_total',
-            'Signing requests the assertion signer received (protected paths on apps that send assertions).',
-        );
-        $this->signedAssertions = $this->registry->registerCounter(
-            self::NAMESPACE,
-            'assertions_signed_total',
-            'Assertions the signer signed successfully.',
-        );
-        $this->assertionErrors = $this->registry->registerCounter(
-            self::NAMESPACE,
-            'assertion_errors_total',
-            'Signing requests the signer refused or failed, by reason.',
-            ['reason'],
-        );
+        if ($counters) {
+            $this->signingRequests = $this->registry->registerCounter(
+                self::NAMESPACE,
+                'signing_requests_total',
+                'Signing requests the assertion signer received (protected paths on apps that send assertions).',
+            );
+            $this->signedAssertions = $this->registry->registerCounter(
+                self::NAMESPACE,
+                'assertions_signed_total',
+                'Assertions the signer signed successfully.',
+            );
+            $this->assertionErrors = $this->registry->registerCounter(
+                self::NAMESPACE,
+                'assertion_errors_total',
+                'Signing requests the signer refused or failed, by reason.',
+                ['reason'],
+            );
+        }
     }
 
     /**
@@ -101,7 +109,7 @@ final class Metrics
      */
     public function recordSigningRequest(): void
     {
-        $this->signingRequests->inc();
+        $this->signingRequests?->inc();
     }
 
     /**
@@ -109,7 +117,7 @@ final class Metrics
      */
     public function recordSignedAssertion(): void
     {
-        $this->signedAssertions->inc();
+        $this->signedAssertions?->inc();
     }
 
     /**
@@ -120,7 +128,7 @@ final class Metrics
      */
     public function recordAssertionError(string $reason): void
     {
-        $this->assertionErrors->inc([self::cleanReason($reason)]);
+        $this->assertionErrors?->inc([self::cleanReason($reason)]);
     }
 
     /**

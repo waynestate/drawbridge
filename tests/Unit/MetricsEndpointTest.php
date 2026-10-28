@@ -17,12 +17,20 @@ final class MetricsEndpointTest extends TestCase
     {
         $gate = new MetricsGate($enabled, $token, new IpAllowList($allow));
 
-        return new MetricsEndpoint($gate, new Metrics(null, '1.2.3'));
+        // counters: false — the endpoint is a separate, per-request process and
+        // cannot see the signer's in-memory counters, so it serves build info
+        // only until a shared store is wired to both.
+        return new MetricsEndpoint($gate, new Metrics(null, '1.2.3', false));
     }
 
     private function assertStatus(MetricsResponse $response, int $status): void
     {
         $this->assertSame($status, $response->status);
+    }
+
+    private function assertNoCounters(string $body): void
+    {
+        $this->assertStringNotContainsString('_total', $body);
     }
 
     public function testDisabledIs404WithEmptyBody(): void
@@ -57,6 +65,7 @@ final class MetricsEndpointTest extends TestCase
         $this->assertStatus($response, 200);
         $this->assertSame(Metrics::mimeType(), $response->contentType);
         $this->assertStringContainsString('drawbridge_build_info{version="1.2.3"} 1', $response->body);
+        $this->assertNoCounters($response->body);
     }
 
     public function testAllowedByIpServesMetrics(): void
@@ -65,24 +74,19 @@ final class MetricsEndpointTest extends TestCase
 
         $this->assertStatus($response, 200);
         $this->assertStringContainsString('drawbridge_build_info', $response->body);
+        $this->assertNoCounters($response->body);
     }
 
     public function testServedBodyIsPrometheusTextFormat(): void
     {
-        $metrics = new Metrics(null, '1.2.3');
-        $metrics->recordSigningRequest();
-        $metrics->recordSignedAssertion();
-        $metrics->recordAssertionError('refused');
-
         $gate = new MetricsGate(true, 's3cr3t', new IpAllowList([]));
-        $response = (new MetricsEndpoint($gate, $metrics))->handle('s3cr3t', '10.0.0.1');
+        $response = (new MetricsEndpoint($gate, new Metrics(null, '1.2.3', false)))->handle('s3cr3t', '10.0.0.1');
 
         $this->assertStatus($response, 200);
         $this->assertStringStartsWith('# HELP ', $response->body);
-        $this->assertStringContainsString('# TYPE drawbridge_signing_requests_total counter', $response->body);
-        $this->assertStringContainsString('drawbridge_signing_requests_total 1', $response->body);
-        $this->assertStringContainsString('drawbridge_assertions_signed_total 1', $response->body);
-        $this->assertStringContainsString('drawbridge_assertion_errors_total{reason="refused"} 1', $response->body);
+        $this->assertStringContainsString('# TYPE drawbridge_build_info gauge', $response->body);
+        $this->assertStringContainsString('drawbridge_build_info{version="1.2.3"} 1', $response->body);
+        $this->assertNoCounters($response->body);
         $this->assertStringEndsWith("\n", $response->body);
     }
 }

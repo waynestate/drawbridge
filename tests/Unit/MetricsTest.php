@@ -36,6 +36,25 @@ final class MetricsTest extends TestCase
         $this->assertStringContainsString('drawbridge_build_info{version="1.2.3"} 1', $output);
     }
 
+    public function testEndpointMetricsHaveNoCounters(): void
+    {
+        $output = (new Metrics(null, '1.2.3', false))->render();
+
+        $this->assertStringContainsString('drawbridge_build_info{version="1.2.3"} 1', $output);
+        $this->assertStringNotContainsString('_total', $output);
+    }
+
+    public function testRecordMethodsAreNoOpsWithoutCounters(): void
+    {
+        $metrics = new Metrics(null, '1.2.3', false);
+
+        $metrics->recordSigningRequest();
+        $metrics->recordSignedAssertion();
+        $metrics->recordAssertionError('refused');
+
+        $this->assertStringNotContainsString('_total', $metrics->render());
+    }
+
     public function testCountersAppearOnceIncremented(): void
     {
         $metrics = $this->metrics();
