@@ -17,23 +17,42 @@ use Symfony\Component\Yaml\Yaml;
  */
 final class ConfigLoader
 {
+    /**
+     * Entra's "amr" values (RFC 8176 names) to what the assertion says. Entra sends "mfa" only when a second factor
+     * was completed. "ngcmfa" is Entra's name for an MFA-strength credential such as Windows Hello. The REFEDS entry
+     * is for a provider that puts its MFA profile URI in "amr"; it never matches an Entra token, so it is harmless.
+     * An unknown value maps to nothing, never to a guessed "mfa".
+     */
     private const DEFAULT_AMR_MAP = [
-        'urn:oasis:names:tc:SAML:2.0:ac:classes:Password' => ['pwd'],
-        'urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport' => ['pwd'],
-        'urn:oasis:names:tc:SAML:2.0:ac:classes:MobileTwoFactorContract' => ['pwd', 'mfa'],
-        'urn:oasis:names:tc:SAML:2.0:ac:classes:TimesyncToken' => ['otp', 'mfa'],
-        'urn:oasis:names:tc:SAML:2.0:ac:classes:Smartcard' => ['hwk'],
+        'pwd' => ['pwd'],
+        'mfa' => ['mfa'],
+        'ngcmfa' => ['mfa'],
+        'otp' => ['otp'],
+        'rsa' => ['rsa'],
+        'wia' => ['wia'],
         'https://refeds.org/profile/mfa' => ['mfa'],
     ];
 
     private const GATEWAY_KEYS = [
-        'issuer', 'sp_entity_id', 'assertion_header', 'user_header', 'attribute_headers',
-        'assertion_ttl_seconds', 'session_seconds', 'session_idle_seconds', 'session_cookie', 'attributes', 'amr_map', 'strip_headers',
+        'issuer', 'assertion_header', 'user_header', 'attribute_headers',
+        'assertion_ttl_seconds', 'session_seconds', 'session_idle_seconds', 'session_cookie', 'strip_headers',
+    ];
+
+    private const OIDC_KEYS = [
+        'issuer', 'metadata_url', 'client_id', 'client_secret_env', 'user_claim', 'attribute_claims', 'extra_claims', 'amr_map',
     ];
 
     private const APP_KEYS = ['id', 'host', 'upstream', 'audience', 'default', 'mode', 'public', 'protected', 'api'];
 
-    private const ATTRIBUTES = ['sub', 'email', 'name', 'affiliations'];
+    private const RULE_KEYS = ['path', 'auth_context'];
+
+    private const ATTRIBUTES = ['email', 'name', 'affiliations'];
+
+    /** Claims the assertion sets itself; an extra claim may not reuse one of these names. */
+    private const RESERVED_CLAIMS = ['iss', 'aud', 'sub', 'iat', 'nbf', 'exp', 'jti', 'auth_time', 'amr', 'acrs', 'email', 'name', 'affiliations', 'typ', 'kid', 'alg'];
+
+    /** The shape of a claim name we are willing to put in Apache config and a Lua table. */
+    private const CLAIM_NAME = '/^[A-Za-z][A-Za-z0-9_]{0,63}$/';
 
     /** @var list<string> */
     private array $errors = [];
@@ -80,9 +99,10 @@ final class ConfigLoader
      */
     private function build(array $data): Config
     {
-        $this->unknownKeys($data, ['gateway', 'apps'], 'config');
+        $this->unknownKeys($data, ['gateway', 'oidc', 'apps'], 'config');
 
         $gateway = $this->gateway(is_array($data['gateway'] ?? null) ? $data['gateway'] : null);
+        $oidc = $this->oidc(is_array($data['oidc'] ?? null) ? $data['oidc'] : null);
 
         $apps = [];
         $rawApps = $data['apps'] ?? null;
@@ -119,7 +139,7 @@ final class ConfigLoader
             throw new ConfigException($this->errors);
         }
 
-        return new Config($gateway, $apps);
+        return new Config($gateway, $oidc, $apps);
     }
 
     /**
@@ -135,7 +155,6 @@ final class ConfigLoader
         $this->unknownKeys($raw, self::GATEWAY_KEYS, 'gateway');
 
         $issuer = $this->url($raw['issuer'] ?? null, 'gateway.issuer');
-        $entityId = $this->url($raw['sp_entity_id'] ?? null, 'gateway.sp_entity_id');
 
         $assertionHeader = $this->headerName($raw['assertion_header'] ?? 'X-Sesame-Assertion', 'gateway.assertion_header');
         $userHeader = $this->headerName($raw['user_header'] ?? 'X-Authenticated-User', 'gateway.user_header');
@@ -168,62 +187,6 @@ final class ConfigLoader
             $cookie = 'drawbridge';
         }
 
-        $attributes = ['sub' => 'NAME_ID', 'email' => 'mail', 'name' => 'displayName', 'affiliations' => 'eduPersonAffiliation'];
-        $rawAttributes = $raw['attributes'] ?? [];
-
-        if (is_array($rawAttributes)) {
-            foreach ($rawAttributes as $key => $value) {
-                if (! in_array($key, self::ATTRIBUTES, true)) {
-                    $this->errors[] = "gateway.attributes: \"{$key}\" is not one of sub, email, name, affiliations.";
-
-                    continue;
-                }
-
-                if (! is_string($value) || preg_match('#^[A-Za-z0-9_:./-]{1,200}$#', $value) !== 1) {
-                    $this->errors[] = "gateway.attributes.{$key} must be an attribute name (letters, digits and _:./- only).";
-
-                    continue;
-                }
-
-                $attributes[(string) $key] = $value;
-            }
-        } else {
-            $this->errors[] = '"gateway.attributes" must be a map.';
-        }
-
-        $amrMap = self::DEFAULT_AMR_MAP;
-        $rawAmr = $raw['amr_map'] ?? null;
-
-        if ($rawAmr !== null) {
-            $amrMap = [];
-
-            if (! is_array($rawAmr)) {
-                $this->errors[] = '"gateway.amr_map" must be a map of AuthnContextClassRef to a list of amr values.';
-            } else {
-                foreach ($rawAmr as $class => $values) {
-                    if (! is_string($class) || $class === '' || ! is_array($values) || ! array_is_list($values)) {
-                        $this->errors[] = '"gateway.amr_map" must map each class (a string) to a list of amr values.';
-
-                        continue;
-                    }
-
-                    $clean = [];
-
-                    foreach ($values as $value) {
-                        if (! is_string($value) || preg_match('/^[a-z0-9_-]{1,20}$/', $value) !== 1) {
-                            $this->errors[] = "gateway.amr_map: \"{$class}\" has an amr value that is not a short lowercase word.";
-
-                            continue;
-                        }
-
-                        $clean[] = $value;
-                    }
-
-                    $amrMap[$class] = $clean;
-                }
-            }
-        }
-
         $strip = [];
         $rawStrip = $raw['strip_headers'] ?? [];
 
@@ -237,7 +200,6 @@ final class ConfigLoader
 
         return new GatewayConfig(
             $issuer,
-            $entityId,
             $assertionHeader,
             $userHeader,
             $attributeHeaders,
@@ -245,10 +207,128 @@ final class ConfigLoader
             $session,
             $idle,
             $cookie,
-            $attributes,
-            $amrMap,
             $strip,
         );
+    }
+
+    /**
+     * @param  array<mixed>|null  $raw
+     */
+    private function oidc(?array $raw): OidcConfig
+    {
+        if ($raw === null) {
+            $this->errors[] = '"oidc" must be a map (the OpenID Connect provider: issuer, client_id, client_secret_env).';
+            $raw = [];
+        }
+
+        $this->unknownKeys($raw, self::OIDC_KEYS, 'oidc');
+
+        $issuer = $this->providerUrl($raw['issuer'] ?? null, 'oidc.issuer');
+        $metadataUrl = isset($raw['metadata_url'])
+            ? $this->providerUrl($raw['metadata_url'], 'oidc.metadata_url')
+            : ($issuer === '' ? '' : rtrim($issuer, '/') . '/.well-known/openid-configuration');
+
+        $clientId = $raw['client_id'] ?? null;
+
+        if (! is_string($clientId) || preg_match('#^[A-Za-z0-9._:/-]{1,200}$#', $clientId) !== 1) {
+            $this->errors[] = '"oidc.client_id" is required: the application (client) ID, letters, digits and ._:/- only.';
+            $clientId = '';
+        }
+
+        $secretEnv = $raw['client_secret_env'] ?? null;
+
+        if (! is_string($secretEnv) || preg_match('/^[A-Z_][A-Z0-9_]{0,63}$/', $secretEnv) !== 1) {
+            $this->errors[] = '"oidc.client_secret_env" is required: the name of the environment variable that holds the client secret (A-Z, 0-9, _), never the secret itself.';
+            $secretEnv = '';
+        }
+
+        $userClaim = $this->claimName($raw['user_claim'] ?? 'preferred_username', 'oidc.user_claim') ?? 'preferred_username';
+
+        $attributeClaims = ['email' => 'email', 'name' => 'name'];
+        $rawAttributes = $raw['attribute_claims'] ?? [];
+
+        if (is_array($rawAttributes)) {
+            foreach ($rawAttributes as $key => $value) {
+                if (! in_array($key, self::ATTRIBUTES, true)) {
+                    $this->errors[] = "oidc.attribute_claims: \"{$key}\" is not one of email, name, affiliations.";
+
+                    continue;
+                }
+
+                // null switches an attribute off.
+                if ($value === null) {
+                    unset($attributeClaims[$key]);
+
+                    continue;
+                }
+
+                $claim = $this->claimName($value, "oidc.attribute_claims.{$key}");
+
+                if ($claim !== null) {
+                    $attributeClaims[(string) $key] = $claim;
+                }
+            }
+        } else {
+            $this->errors[] = '"oidc.attribute_claims" must be a map.';
+        }
+
+        $extraClaims = [];
+        $rawExtra = $raw['extra_claims'] ?? [];
+
+        if (! is_array($rawExtra) || ! array_is_list($rawExtra)) {
+            $this->errors[] = '"oidc.extra_claims" must be a list of claim names.';
+        } else {
+            foreach ($rawExtra as $value) {
+                $claim = $this->claimName($value, 'oidc.extra_claims');
+
+                if ($claim === null) {
+                    continue;
+                }
+
+                if (in_array(strtolower($claim), self::RESERVED_CLAIMS, true)) {
+                    $this->errors[] = "oidc.extra_claims: \"{$claim}\" is a claim the assertion sets itself.";
+
+                    continue;
+                }
+
+                $extraClaims[] = $claim;
+            }
+        }
+
+        $amrMap = self::DEFAULT_AMR_MAP;
+        $rawAmr = $raw['amr_map'] ?? null;
+
+        if ($rawAmr !== null) {
+            $amrMap = [];
+
+            if (! is_array($rawAmr)) {
+                $this->errors[] = '"oidc.amr_map" must be a map of a provider "amr" value to a list of amr values.';
+            } else {
+                foreach ($rawAmr as $from => $values) {
+                    if (! is_string($from) || $from === '' || strlen($from) > 200 || ! is_array($values) || ! array_is_list($values)) {
+                        $this->errors[] = '"oidc.amr_map" must map each provider value (a string) to a list of amr values.';
+
+                        continue;
+                    }
+
+                    $clean = [];
+
+                    foreach ($values as $value) {
+                        if (! is_string($value) || preg_match('/^[a-z0-9_-]{1,20}$/', $value) !== 1) {
+                            $this->errors[] = "oidc.amr_map: \"{$from}\" has an amr value that is not a short lowercase word.";
+
+                            continue;
+                        }
+
+                        $clean[] = $value;
+                    }
+
+                    $amrMap[$from] = $clean;
+                }
+            }
+        }
+
+        return new OidcConfig($issuer, $metadataUrl, $clientId, $secretEnv, $userClaim, $attributeClaims, array_values(array_unique($extraClaims)), $amrMap);
     }
 
     private function app(int|string $index, mixed $raw): ?AppConfig
@@ -320,7 +400,29 @@ final class ConfigLoader
                 continue;
             }
 
-            foreach ($list as $path) {
+            foreach ($list as $item) {
+                $context = null;
+                $path = $item;
+
+                // A rule is a bare path, or a map with the path and an authentication context.
+                if (is_array($item)) {
+                    $this->unknownKeys($item, self::RULE_KEYS, "{$where}.{$key}");
+                    $path = $item['path'] ?? null;
+                    $context = $item['auth_context'] ?? null;
+
+                    if ($protection === Protection::Open && $context !== null) {
+                        $this->errors[] = "{$where}.{$key}: a public path cannot need an authentication context.";
+
+                        continue;
+                    }
+
+                    if ($context !== null && (! is_string($context) || preg_match('/^c([1-9]|[1-9][0-9])$/', $context) !== 1)) {
+                        $this->errors[] = "{$where}.{$key}: auth_context must be an Entra authentication context ID, c1 to c99.";
+
+                        continue;
+                    }
+                }
+
                 $problem = $this->pathProblem($path);
 
                 if ($problem !== null || ! is_string($path)) {
@@ -336,7 +438,7 @@ final class ConfigLoader
                 }
 
                 $seen[$path] = $key;
-                $rules[] = new PathRule($path, $protection);
+                $rules[] = new PathRule($path, $protection, is_string($context) ? $context : null);
             }
         }
 
@@ -391,6 +493,38 @@ final class ConfigLoader
             $this->errors[] = "\"{$where}\" must be an http(s) URL with no query or credentials.";
 
             return '';
+        }
+
+        return $value;
+    }
+
+    /**
+     * The provider's URL: https, or plain http only for a host under the reserved ".test" name (the local rig), which
+     * can never be a real provider on the internet.
+     */
+    private function providerUrl(mixed $value, string $where): string
+    {
+        if (! is_string($value) || preg_match('#^(https?)://([A-Za-z0-9.-]+)(:\d{1,5})?(/[A-Za-z0-9._~/-]*)?$#', $value, $match) !== 1) {
+            $this->errors[] = "\"{$where}\" must be an https URL with no query or credentials.";
+
+            return '';
+        }
+
+        if ($match[1] === 'http' && ! str_ends_with(strtolower($match[2]), '.test')) {
+            $this->errors[] = "\"{$where}\" must use https (plain http is accepted only for a .test host, the local rig).";
+
+            return '';
+        }
+
+        return $value;
+    }
+
+    private function claimName(mixed $value, string $where): ?string
+    {
+        if (! is_string($value) || preg_match(self::CLAIM_NAME, $value) !== 1) {
+            $this->errors[] = "\"{$where}\" must be a claim name (a letter, then letters, digits and _).";
+
+            return null;
         }
 
         return $value;

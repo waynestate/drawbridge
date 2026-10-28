@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "ab561db8e3b975899b4bb6f34562a141",
+    "content-hash": "40f28896cc9f3f2f0f719c8d7fceda9e",
     "packages": [
         {
             "name": "lcobucci/jwt",
@@ -3617,7 +3617,6 @@
     "prefer-lowest": false,
     "platform": {
         "php": "^8.3",
-        "ext-dom": "*",
         "ext-openssl": "*"
     },
     "platform-dev": {},

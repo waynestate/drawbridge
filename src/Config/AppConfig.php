@@ -36,10 +36,22 @@ final readonly class AppConfig
      */
     public function protectionFor(string $rawPath): Protection
     {
+        if (PathNormalizer::normalize($rawPath) === null) {
+            return Protection::Login;
+        }
+
+        return $this->ruleFor($rawPath)->protection ?? $this->default;
+    }
+
+    /**
+     * The most specific rule for a request path, or null when no rule names it (or the path is refused).
+     */
+    public function ruleFor(string $rawPath): ?PathRule
+    {
         $path = PathNormalizer::normalize($rawPath);
 
         if ($path === null) {
-            return Protection::Login;
+            return null;
         }
 
         $best = null;
@@ -50,7 +62,7 @@ final readonly class AppConfig
             }
         }
 
-        return $best === null ? $this->default : $best->protection;
+        return $best;
     }
 
     public function sendsAssertion(): bool

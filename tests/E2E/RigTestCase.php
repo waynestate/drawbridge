@@ -9,10 +9,10 @@ use Symfony\Component\BrowserKit\HttpBrowser;
 use Symfony\Component\HttpClient\HttpClient;
 
 /**
- * Shared helpers for the container rig tests: a browser that follows the SAML round trip, and a raw socket client for
- * the hostile requests an HTTP library would tidy up before sending.
+ * Shared helpers for the container rig tests: a browser that follows the OpenID Connect round trip through the mock
+ * provider, and a raw socket client for the hostile requests an HTTP library would tidy up before sending.
  *
- * These tests only ever talk to the rig's own containers (gateway, IdP, echo) on the private Docker network.
+ * These tests only ever talk to the rig's own containers (gateway, mock provider, echo) on the private Docker network.
  */
 abstract class RigTestCase extends TestCase
 {
@@ -22,10 +22,11 @@ abstract class RigTestCase extends TestCase
 
     protected const PORT = 8080;
 
-    /** The user the test IdP knows. The password is public on purpose. */
+    /** The user the tests sign in as. The mock provider signs in anyone; there is no password. */
     protected const USER = 'alice';
 
-    protected const PASSWORD = 'alice-test-password';
+    /** Where the gateway sends a visitor to sign in. */
+    protected const AUTHORIZE = 'http://idp.test:8080/entra/authorize';
 
     protected function setUp(): void
     {
@@ -46,45 +47,82 @@ abstract class RigTestCase extends TestCase
         $browser = new HttpBrowser(HttpClient::create(['timeout' => 20]));
         $browser->followRedirects(true);
         $browser->setMaxRedirects(15);
+        // mod_auth_openidc's step-up answer is a page with a meta refresh to the provider, as a browser would follow.
+        $browser->followMetaRefresh(true);
+        // What a real browser says. mod_auth_openidc answers 401 instead of redirecting a client that plainly is not one.
+        $browser->setServerParameter('HTTP_ACCEPT', 'text/html,application/xhtml+xml');
 
         return $browser;
     }
 
     /**
-     * Sign in through the whole SAML round trip, ending on the page the gateway returns to.
+     * The ID token claims the mock provider puts in for a sign-in, shaped like Entra's. A test can add or override any.
      *
-     * @return array<string, mixed> The echo app's JSON for the page we landed on.
+     * @param  array<string, mixed>  $claims
+     * @return array<string, mixed>
      */
-    protected function login(HttpBrowser $browser, string $host, string $path = '/'): array
+    protected function claims(array $claims = []): array
     {
-        $browser->request('GET', 'http://' . $host . ':' . self::PORT . $path);
-        $this->assertStringContainsString('idp.test', $browser->getRequest()?->getUri() ?? '', 'an unauthenticated request should end at the test IdP');
-
-        $crawler = $browser->getCrawler();
-        $form = $crawler->filter('input[name="username"]')->ancestors()->filter('form')->form([
-            'username' => self::USER,
-            'password' => self::PASSWORD,
-        ]);
-        $browser->submit($form);
-
-        return $this->completeSamlPost($browser);
+        return array_merge([
+            'preferred_username' => self::USER,
+            'email' => 'alice@example.test',
+            'name' => 'Alice Tester',
+            'affiliations' => ['student', 'member'],
+            'amr' => ['pwd'],
+            'auth_time' => time(),
+            'wsuRoles' => ['rig-tester'],
+        ], $claims);
     }
 
     /**
-     * The IdP answers with a page that posts the SAML response to the gateway. Do that, as a browser would.
+     * Sign in through the whole OpenID Connect round trip, ending on the page the gateway returns to.
      *
+     * @param  array<string, mixed>  $claims  Claims to add to (or override in) the ID token; null drops one.
+     * @return array<string, mixed> The echo app's JSON for the page we landed on.
+     */
+    protected function login(HttpBrowser $browser, string $host, string $path = '/', array $claims = []): array
+    {
+        $browser->request('GET', 'http://' . $host . ':' . self::PORT . $path);
+
+        return $this->signInAtTheProvider($browser, $claims);
+    }
+
+    /**
+     * Fill in the mock provider's sign-in form the browser is looking at, and follow the redirects back.
+     *
+     * @param  array<string, mixed>  $claims
      * @return array<string, mixed>
      */
-    protected function completeSamlPost(HttpBrowser $browser): array
+    protected function signInAtTheProvider(HttpBrowser $browser, array $claims = []): array
     {
-        $crawler = $browser->getCrawler();
+        $this->assertStringStartsWith(self::AUTHORIZE, $browser->getRequest()?->getUri() ?? '', 'an unauthenticated request should end at the mock provider');
 
-        if ($crawler->filter('input[name="SAMLResponse"]')->count() > 0) {
-            $form = $crawler->filter('input[name="SAMLResponse"]')->ancestors()->filter('form')->form();
-            $browser->submit($form);
-        }
+        $all = array_filter($this->claims($claims), static fn(mixed $value): bool => $value !== null);
+        $form = $browser->getCrawler()->filter('input[name="username"]')->ancestors()->filter('form')->form([
+            'username' => (string) ($all['preferred_username'] ?? self::USER),
+            'claims' => (string) json_encode($all, JSON_UNESCAPED_SLASHES),
+        ]);
+        $browser->submit($form);
 
         return $this->json($browser->getResponse()->getContent());
+    }
+
+    /**
+     * Where a response sends the visitor to sign in: a redirect, or mod_auth_openidc's step-up page (a meta refresh).
+     *
+     * @param  array{status: int, headers: array<string, string>, body: string}  $response
+     */
+    protected function signInTarget(array $response): string
+    {
+        if (in_array($response['status'], [302, 303], true)) {
+            return $response['headers']['location'] ?? '';
+        }
+
+        if (preg_match('/<meta http-equiv="refresh" content="0; url=([^"]+)">/', $response['body'], $match) === 1) {
+            return html_entity_decode($match[1], ENT_QUOTES | ENT_HTML5);
+        }
+
+        return '';
     }
 
     /**
@@ -108,6 +146,11 @@ abstract class RigTestCase extends TestCase
     {
         $socket = stream_socket_client('tcp://gateway:' . self::PORT, $errno, $error, 10);
         $this->assertIsResource($socket, "could not reach the gateway: {$error}");
+
+        // Look like a browser unless the test says otherwise (see browser()).
+        if (array_filter($headerLines, static fn(string $line): bool => stripos($line, 'Accept:') === 0) === []) {
+            $headerLines[] = 'Accept: text/html';
+        }
 
         $request = "{$method} {$target} HTTP/1.1\r\nHost: {$host}\r\n" . implode('', array_map(static fn(string $line): string => $line . "\r\n", $headerLines)) . "Connection: close\r\n\r\n";
 

@@ -13,7 +13,9 @@ final class HeaderPolicyTest extends TestCase
 {
     private function policy(): HeaderPolicy
     {
-        return HeaderPolicy::fromConfig(Fixtures::config()->gateway);
+        $config = Fixtures::config();
+
+        return HeaderPolicy::fromConfig($config->gateway, $config->oidc);
     }
 
     /**
@@ -40,6 +42,12 @@ final class HeaderPolicyTest extends TestCase
             'Forwarded' => ['Forwarded', true],
             'X-Real-IP' => ['X-Real-IP', true],
             'surrounding whitespace' => [' X-Authenticated-User ', true],
+            'a mod_auth_openidc claim header' => ['OIDC_CLAIM_sub', true],
+            'any claim under that prefix' => ['OIDC-Claim-Made-Up', true],
+            'the access token' => ['OIDC_access_token', true],
+            'the ID token payload' => ['OIDC_id_token_payload', true],
+            'the refresh token' => ['oidc-refresh-token', true],
+            'userinfo' => ['OIDC_userinfo_json', true],
             'Cookie is not ours' => ['Cookie', false],
             'Authorization is not ours' => ['Authorization', false],
             'Accept' => ['Accept', false],
@@ -78,6 +86,9 @@ final class HeaderPolicyTest extends TestCase
             'remote-user', 'remote_user', 'x-remote-user', 'x_remote_user',
             'x-forwarded-for', 'x_forwarded_for', 'forwarded', 'proxy',
             'x-authenticated-role', 'x_authenticated_role',
+            'oidc_claim_sub', 'oidc-claim-sub', 'oidc_claim_preferred_username', 'oidc_claim_email', 'oidc_claim_wsuroles',
+            'oidc_claim_acrs', 'oidc_claim_amr', 'oidc_claim_affiliations',
+            'oidc_access_token', 'oidc-access-token', 'oidc_id_token_payload', 'oidc_refresh_token', 'oidc_userinfo_json',
         ] as $expected) {
             $this->assertContains($expected, $names, $expected);
         }

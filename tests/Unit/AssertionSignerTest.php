@@ -13,6 +13,7 @@ use Waynestate\Drawbridge\Assertion\AssertionSigner;
 use Waynestate\Drawbridge\Assertion\InvalidSigningRequest;
 use Waynestate\Drawbridge\Assertion\KeyPair;
 use Waynestate\Drawbridge\Assertion\SigningRequest;
+use Waynestate\Drawbridge\Config\ConfigLoader;
 use Waynestate\Drawbridge\Tests\Support\FixedClock;
 use Waynestate\Drawbridge\Tests\Support\Fixtures;
 use Waynestate\Drawbridge\Tests\Support\SesameContract;
@@ -34,14 +35,48 @@ final class AssertionSignerTest extends TestCase
         $this->clock = FixedClock::at(self::NOW);
     }
 
-    private function signer(): AssertionSigner
+    private function signer(?\Waynestate\Drawbridge\Config\Config $config = null): AssertionSigner
     {
-        return new AssertionSigner(Fixtures::config(), InMemory::plainText($this->keys['private']), 'test-key-1', $this->clock);
+        return new AssertionSigner($config ?? Fixtures::config(), InMemory::plainText($this->keys['private']), 'test-key-1', $this->clock);
     }
 
-    private function request(string $host = 'echo.apps.example.test', string $authInstant = '2026-10-28T11:55:00Z', string $context = 'https://refeds.org/profile/mfa'): SigningRequest
+    private function now(): int
     {
-        return SigningRequest::fromLine(SigningRequest::toLine($host, 'jdoe', 'jdoe@example.test', 'Jane Doe', ['student', 'member'], $authInstant, $context));
+        return (new \DateTimeImmutable(self::NOW))->getTimestamp();
+    }
+
+    /**
+     * An Entra-shaped ID token payload, as mod_auth_openidc hands it over.
+     *
+     * @param  array<string, mixed>  $override
+     * @return array<string, mixed>
+     */
+    private function idToken(array $override = []): array
+    {
+        return array_merge([
+            'iss' => Fixtures::OIDC_ISSUER,
+            'aud' => '11111111-2222-3333-4444-555555555555',
+            'sub' => 'AAAAAAAAAAAAAAAAAAAAAIkzqFVrSaSaFHy782bbtaQ',
+            'oid' => '00000000-0000-0000-66f3-3332eca7ea81',
+            'preferred_username' => 'jdoe@example.test',
+            'email' => 'jdoe@example.test',
+            'name' => 'Jane Doe',
+            'affiliations' => ['student', 'member'],
+            'auth_time' => $this->now() - 300,
+            'amr' => ['pwd', 'mfa'],
+            'acrs' => ['c1', 'c3'],
+            'wsuRoles' => ['staff', 'faculty'],
+            'iat' => $this->now() - 300,
+            'exp' => $this->now() + 3300,
+        ], $override);
+    }
+
+    /**
+     * @param  array<string, mixed>  $override
+     */
+    private function request(string $host = 'echo.apps.example.test', array $override = []): SigningRequest
+    {
+        return SigningRequest::fromLine(SigningRequest::toLine($host, $this->idToken($override)));
     }
 
     private function parse(string $token): UnencryptedToken
@@ -59,7 +94,7 @@ final class AssertionSignerTest extends TestCase
         $claims = SesameContract::accepts($token, $this->keys['public'], self::ISSUER, 'echo.apps.example.test', $this->clock);
 
         $this->assertNotNull($claims);
-        $this->assertSame('jdoe', $claims['sub']);
+        $this->assertSame('jdoe@example.test', $claims['sub'], 'sub is the configured user claim, not the pairwise Entra sub');
         $this->assertSame('jdoe@example.test', $claims['email']);
         $this->assertSame('Jane Doe', $claims['name']);
         $this->assertSame(['student', 'member'], $claims['affiliations']);
@@ -69,14 +104,17 @@ final class AssertionSignerTest extends TestCase
     {
         $parsed = $this->parse($this->signer()->sign($this->request()));
         $claims = $parsed->claims();
-        $now = (new \DateTimeImmutable(self::NOW))->getTimestamp();
+        $now = $this->now();
 
-        $this->assertSame(self::ISSUER, $claims->get('iss'));
+        $this->assertSame(self::ISSUER, $claims->get('iss'), 'iss is DRAWBRIDGE, never the provider');
         $this->assertSame(['echo.apps.example.test'], $claims->get('aud'));
         $this->assertSame($now, $claims->get('iat')->getTimestamp());
         $this->assertSame($now + 60, $claims->get('exp')->getTimestamp());
         $this->assertSame($now - 300, $claims->get('auth_time'));
-        $this->assertSame(['mfa'], $claims->get('amr'));
+        $this->assertSame(['pwd', 'mfa'], $claims->get('amr'));
+        $this->assertSame(['c1', 'c3'], $claims->get('acrs'));
+        $this->assertSame(['staff', 'faculty'], $claims->get('wsuRoles'));
+        $this->assertFalse($claims->has('oid'), 'claims that are not configured are not passed on');
         $this->assertMatchesRegularExpression('/^[0-9a-f]{32}$/', $claims->get('jti'));
         $this->assertSame('drawbridge+jwt', $parsed->headers()->get('typ'));
         $this->assertSame('test-key-1', $parsed->headers()->get('kid'));
@@ -106,6 +144,36 @@ final class AssertionSignerTest extends TestCase
         $this->signer()->sign($this->request('evil.example.test'));
     }
 
+    public function testAnIdTokenFromAnotherIssuerIsNotSigned(): void
+    {
+        $this->expectException(InvalidSigningRequest::class);
+
+        $this->signer()->sign($this->request(override: ['iss' => 'https://login.microsoftonline.com/99999999-0000-0000-0000-000000000000/v2.0']));
+    }
+
+    public function testAnIdTokenWithoutTheUserClaimIsNotSigned(): void
+    {
+        $this->expectException(InvalidSigningRequest::class);
+
+        $this->signer()->sign($this->request(override: ['preferred_username' => '']));
+    }
+
+    public function testAUserClaimWithAControlCharacterIsNotSigned(): void
+    {
+        $this->expectException(InvalidSigningRequest::class);
+
+        $this->signer()->sign($this->request(override: ['preferred_username' => "jdoe\nadmin"]));
+    }
+
+    public function testTheUserClaimIsConfigurable(): void
+    {
+        $config = Fixtures::configArray();
+        $config['oidc']['user_claim'] = 'alias';
+        $token = $this->signer(ConfigLoader::fromArray($config))->sign($this->request(override: ['alias' => 'ab1234']));
+
+        $this->assertSame('ab1234', $this->parse($token)->claims()->get('sub'));
+    }
+
     public function testAnotherKeyOrAnotherIssuerOrAnExpiredTokenIsRefused(): void
     {
         $token = $this->signer()->sign($this->request());
@@ -129,39 +197,68 @@ final class AssertionSignerTest extends TestCase
         $this->assertNull(SesameContract::accepts("{$header}.{$forged}.{$signature}", $this->keys['public'], self::ISSUER, 'echo.apps.example.test', $this->clock));
     }
 
-    public function testNoAuthTimeOrAmrWhenTheIdpDidNotSayAnything(): void
+    public function testNoAuthTimeAmrOrAcrsWhenTheIdTokenDidNotSayAnything(): void
     {
-        $claims = $this->parse($this->signer()->sign($this->request(authInstant: '', context: '')))->claims();
+        $claims = $this->parse($this->signer()->sign($this->request(override: ['auth_time' => null, 'amr' => null, 'acrs' => null])))->claims();
 
         $this->assertFalse($claims->has('auth_time'));
         $this->assertFalse($claims->has('amr'));
+        $this->assertFalse($claims->has('acrs'));
     }
 
-    public function testAnUnknownAuthnContextGivesNoAmr(): void
+    public function testAPasswordOnlySignInIsNotMfa(): void
     {
-        $claims = $this->parse($this->signer()->sign($this->request(context: 'urn:example:made-up')))->claims();
+        $claims = $this->parse($this->signer()->sign($this->request(override: ['amr' => ['pwd']])))->claims();
+
+        $this->assertSame(['pwd'], $claims->get('amr'));
+    }
+
+    public function testUnknownAmrValuesGiveNoAmr(): void
+    {
+        $claims = $this->parse($this->signer()->sign($this->request(override: ['amr' => ['made-up', 'mfa-ish']])))->claims();
 
         $this->assertFalse($claims->has('amr'));
+    }
+
+    public function testNgcmfaCountsAsMfaOnce(): void
+    {
+        $claims = $this->parse($this->signer()->sign($this->request(override: ['amr' => ['ngcmfa', 'mfa']])))->claims();
+
+        $this->assertSame(['mfa'], $claims->get('amr'));
+    }
+
+    public function testOnlyWellFormedAuthenticationContextsArePassedOn(): void
+    {
+        $claims = $this->parse($this->signer()->sign($this->request(override: ['acrs' => ['c1', 'admin', 'c100', 'c0', 7]])))->claims();
+
+        $this->assertSame(['c1'], $claims->get('acrs'));
     }
 
     public function testAnAuthTimeInTheFutureIsDropped(): void
     {
-        $claims = $this->parse($this->signer()->sign($this->request(authInstant: '2026-10-28T13:00:00Z')))->claims();
+        $claims = $this->parse($this->signer()->sign($this->request(override: ['auth_time' => $this->now() + 3600])))->claims();
 
         $this->assertFalse($claims->has('auth_time'));
     }
 
-    public function testAMalformedAuthInstantIsDropped(): void
+    public function testANonNumericAuthTimeIsDropped(): void
     {
-        $claims = $this->parse($this->signer()->sign($this->request(authInstant: '28 October 2026')))->claims();
+        $claims = $this->parse($this->signer()->sign($this->request(override: ['auth_time' => '28 October 2026'])))->claims();
 
         $this->assertFalse($claims->has('auth_time'));
     }
 
-    public function testFractionalSecondsInAuthInstantAreAccepted(): void
+    public function testAnExtraClaimThatIsAnObjectIsDropped(): void
     {
-        $claims = $this->parse($this->signer()->sign($this->request(authInstant: '2026-10-28T11:55:00.123Z')))->claims();
+        $claims = $this->parse($this->signer()->sign($this->request(override: ['wsuRoles' => ['nested' => ['x' => 1]]])))->claims();
 
-        $this->assertSame((new \DateTimeImmutable(self::NOW))->getTimestamp() - 300, $claims->get('auth_time'));
+        $this->assertFalse($claims->has('wsuRoles'));
+    }
+
+    public function testAnAffiliationsClaimThatIsOneStringBecomesAList(): void
+    {
+        $claims = $this->parse($this->signer()->sign($this->request(override: ['affiliations' => 'staff'])))->claims();
+
+        $this->assertSame(['staff'], $claims->get('affiliations'));
     }
 }

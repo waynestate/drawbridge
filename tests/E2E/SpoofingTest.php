@@ -41,6 +41,13 @@ final class SpoofingTest extends RigTestCase
             'X-Real-IP' => ['X-Real-IP: 203.0.113.9'],
             'oauth2-proxy style' => ['X-Auth-Request-User: admin'],
             'a DRAWBRIDGE header' => ['X-Drawbridge-User: admin'],
+            'a mod_auth_openidc claim' => ['OIDC_CLAIM_sub: admin'],
+            'a mod_auth_openidc claim, hyphens' => ['OIDC-CLAIM-preferred_username: admin'],
+            'a claim the config passes on' => ['OIDC_CLAIM_wsuRoles: admin'],
+            'an invented claim' => ['OIDC_CLAIM_isAdmin: admin'],
+            'the access token' => ['OIDC_access_token: admin'],
+            'the ID token payload' => ['OIDC_id_token_payload: {"preferred_username":"admin"}'],
+            'userinfo' => ['OIDC_userinfo_json: {"preferred_username":"admin"}'],
         ];
     }
 
@@ -53,7 +60,7 @@ final class SpoofingTest extends RigTestCase
         $found = [];
 
         foreach ($vars as $name => $value) {
-            if (preg_match('/^HTTP_(X_AUTHENTICATED_|X_SESAME_|X_DRAWBRIDGE_|REMOTE_USER|X_REMOTE_USER|X_AUTH_REQUEST_|X_REAL_IP|FORWARDED$)/', $name) === 1) {
+            if (preg_match('/^HTTP_(X_AUTHENTICATED_|X_SESAME_|X_DRAWBRIDGE_|REMOTE_USER|X_REMOTE_USER|X_AUTH_REQUEST_|X_REAL_IP|FORWARDED$|OIDC)/i', $name) === 1) {
                 $found[] = $name . '=' . $value;
             }
         }

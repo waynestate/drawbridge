@@ -68,12 +68,26 @@ final class PathAttackTest extends RigTestCase
         $this->assertStringNotContainsString('server_vars', $response['body']);
     }
 
-    public function testTheSpMetadataIsPublicAndIsOnlyThePublicHalf(): void
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function forgedCallbacks(): array
     {
-        $response = $this->raw(self::ECHO . ':' . self::PORT, '/_drawbridge/sso/metadata');
+        return [
+            'a made-up code and state' => ['/_drawbridge/oidc/callback?code=forged&state=forged'],
+            'an id_token in the query' => ['/_drawbridge/oidc/callback?id_token=aaa.bbb.ccc&state=forged'],
+            'a provider error' => ['/_drawbridge/oidc/callback?error=access_denied&state=forged'],
+            'nothing at all' => ['/_drawbridge/oidc/callback'],
+        ];
+    }
 
-        $this->assertSame(200, $response['status']);
-        $this->assertStringContainsString('EntityDescriptor', $response['body']);
-        $this->assertStringNotContainsString('PRIVATE KEY', $response['body']);
+    #[DataProvider('forgedCallbacks')]
+    public function testAForgedCallbackSignsNobodyIn(string $target): void
+    {
+        $response = $this->raw(self::ECHO . ':' . self::PORT, $target);
+
+        // A bare callback gets the module's own fragment-to-POST helper page; none of these may reach the app or start a session.
+        $this->assertStringNotContainsString('server_vars', $response['body']);
+        $this->assertStringNotContainsString('drawbridge=', $response['headers']['set-cookie'] ?? '', $target . ' set a session cookie');
     }
 }

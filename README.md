@@ -6,15 +6,16 @@ Checks: `composer ci` (the same command runs on GitLab and GitHub). The containe
 
 > The one way into the Citadel. It only comes down for people who signed in.
 
-DRAWBRIDGE is the Citadel auth gateway at `auth.apps.wayne.edu`: one SAML service provider for every app on the
-platform. It sits in front of the apps as a reverse proxy, makes sure the visitor has a session, throws away any
-identity header the visitor tried to bring along, and passes the app either a short-lived signed assertion that
-SESAME's `gateway` driver verifies, or plain `X-Authenticated-*` headers for apps that cannot verify a token yet.
-Which paths need a login is declared per app in a config file. Nothing else decides it.
+DRAWBRIDGE is the Citadel auth gateway at `auth.apps.wayne.edu`: one OpenID Connect client, signed in through
+Microsoft Entra ID, for every app on the platform. It sits in front of the apps as a reverse proxy, makes sure the
+visitor has a session, throws away any identity header the visitor tried to bring along, and passes the app either a
+short-lived signed assertion that SESAME's `gateway` driver verifies, or plain `X-Authenticated-*` headers for apps
+that cannot verify a token yet. Which paths need a login, and which need an Entra authentication context on top, is
+declared per app in a config file. Nothing else decides it.
 
-Why a moat and not a lock on each door: every app doing its own SAML is another chance to get XML
-signatures wrong. DRAWBRIDGE does the sign-in once, in a maintained SP, and every app only has to check one small
-signed token.
+Why a moat and not a lock on each door: every app doing its own OpenID Connect is another chance to get a nonce,
+a state check or a token signature wrong. DRAWBRIDGE does the sign-in once, in a maintained module
+(mod_auth_openidc), and every app only has to check one small signed token.
 
 This repository is published from Wayne State University's internal GitLab and mirrored here. Changes land there
 first.
@@ -34,34 +35,60 @@ decisions written down.
 | HELMET | security headers and CSP reporting |
 | Pinstripe | the Laravel example that wears all of it |
 | Sourdough | the starter that keeps the stack fed |
-| **DRAWBRIDGE** | **the one SAML front door for the Citadel** |
+| **DRAWBRIDGE** | **the one OpenID Connect front door for the Citadel** |
 
 ## How it works
 
 ```
 browser --> Apache httpd (DRAWBRIDGE) --> app container
-              |  mod_auth_mellon : SAML SP, one session cookie per app host
-              |  mod_lua         : strips identity headers on every request, before anything else
-              |  mod_rewrite     : asks the PHP signer for an assertion (prg: map)
-              |  mod_proxy       : forwards to the app
-              `- PHP component   : validates the config, renders the Apache config, signs assertions (ES256)
+              |  mod_auth_openidc : OpenID Connect client (Entra ID), one session cookie per app host
+              |  mod_lua          : strips identity headers on every request, before anything else
+              |  mod_rewrite      : asks the PHP signer for an assertion (prg: map)
+              |  mod_proxy        : forwards to the app
+              `- PHP component    : validates the config, renders the Apache config, signs assertions (ES256)
 ```
 
-- A request for a **protected** path without a session is redirected to the IdP. For an **api** path it gets a plain
-  401, so a script is never handed an HTML login page. A **public** path passes through with no identity at all.
-- The assertion is a compact JWT with `typ: drawbridge+jwt` and a `kid`. Claims: `iss`, `aud` (the app's host),
-  `sub`, `iat`, `nbf`, `exp` (60 seconds by default), `jti`, `auth_time` and `amr` when the IdP says so, plus
-  `email`, `name` and `affiliations`. A new one is minted for every request.
+- A request for a **protected** path without a session is redirected to Entra (authorization code flow with PKCE).
+  For an **api** path it gets a plain 401, so a script is never handed an HTML login page. A **public** path passes
+  through with no identity at all.
+- mod_auth_openidc checks the ID token (signature, issuer, audience, nonce, expiry) and keeps the session. The
+  claims reach the gateway in the request environment only, never as headers, and no Entra token is passed to an app.
+- The assertion is a compact JWT with `typ: drawbridge+jwt` and a `kid`. Claims: `iss` (DRAWBRIDGE, never Entra),
+  `aud` (the app's host), `sub` (the configured user claim, `preferred_username` by default), `iat`, `nbf`, `exp`
+  (60 seconds by default), `jti`; `auth_time`, `amr` and `acrs` when the ID token carries them; `email`, `name` and
+  `affiliations` when configured; and any `extra_claims` (for example `wsuRoles`). A new one is minted for every
+  request, and only from an ID token whose `iss` is the configured provider.
 - If the signer cannot sign, the answer is 503. A request never reaches the app unsigned.
 - Header stripping: the guard removes every inbound `X-Authenticated-*`, `X-Sesame-*`, `X-Drawbridge-*`,
-  `Remote-User`, `X-Forwarded-*`, `Forwarded` and similar header, in every hyphen and underscore spelling, on every
-  request, before authentication runs. It also trims `Connection` to `close`, `keep-alive` and `upgrade`, so a client
-  cannot ask the proxy to drop a header the gateway set.
+  `OIDC_CLAIM_*`, `OIDC_access_token` (and the module's other token names), `Remote-User`, `X-Forwarded-*`,
+  `Forwarded` and similar header, in every hyphen and underscore spelling, on every request, before authentication
+  runs. Every header under an owned prefix goes, whatever follows the prefix. It also trims `Connection` to `close`,
+  `keep-alive` and `upgrade`, so a client cannot ask the proxy to drop a header the gateway set.
 
-Known limit: Apache's header table cannot be listed from Lua, so the guard removes a generated list of explicit names
-(the gateway's own headers, plus each owned prefix joined to the common identity words). A made-up header under an
-owned prefix that nothing reads is not on that list. Apps must read only the headers the gateway documents, and
-SESAME's `gateway` driver reads one.
+### Step-up with an authentication context
+
+A path rule can name an Entra authentication context (`c1` to `c99`):
+
+```yaml
+protected:
+  - /admin/
+  - path: /admin/payroll/
+    auth_context: c1
+```
+
+On that path the gateway asks Entra for the context with the OpenID Connect `claims` request parameter
+(`{"id_token":{"acrs":{"essential":true,"value":"c1"}}}`) and lets the request through only when the ID token's
+`acrs` array lists `c1`. A visitor already signed in without it is sent back to Entra to step up (mod_auth_openidc
+answers with a short page that forwards the browser); an `api` path answers 401. What `c1` actually demands (MFA,
+a compliant device, a fresh sign-in) is a Conditional Access policy in Entra, not DRAWBRIDGE config. The check is
+made twice: by mod_auth_openidc's `Require claim acrs:c1`, and again by the gateway's own stamp step.
+
+### Signing out
+
+An app links to `/_drawbridge/oidc/callback?logout=<URL-encoded address on the same host>`. mod_auth_openidc ends
+the gateway session for that host and sends the browser through Entra's sign-out endpoint (named in the provider's
+discovery document) back to the address. An address on another host is refused, so the link cannot be used to bounce
+visitors elsewhere.
 
 ## Install and quick start
 
@@ -91,15 +118,15 @@ docker build -f docker/gateway/Dockerfile -t drawbridge-gateway .
 
 With PHP installed locally the same commands are `composer install` and `php bin/drawbridge ...`.
 
-Then run the image with the files it cannot start without mounted read-only (the entrypoint refuses to start if any is
-missing):
+Then run the image with the two files it cannot start without mounted read-only, and the two secrets in its
+environment (the entrypoint refuses to start if any is missing, and `render` refuses an unusable secret):
 
-| File | What it is |
+| Item | What it is |
 |---|---|
-| `drawbridge.yaml` | the per-app config |
-| `idp-metadata.xml` | the IdP's SAML metadata |
-| `sp.key`, `sp.crt` | the SP's SAML key pair (`sp:metadata` prints the metadata to register) |
-| `signing.key` | the ES256 key that signs assertions (`keys:generate` makes one) |
+| `drawbridge.yaml` (file) | the per-app config, including the `oidc` block |
+| `signing.key` (file) | the ES256 key that signs assertions (`keys:generate` makes one) |
+| `DRAWBRIDGE_OIDC_CLIENT_SECRET` (env) | the Entra client secret (the variable name is `oidc.client_secret_env`) |
+| `DRAWBRIDGE_OIDC_CRYPTO_PASSPHRASE` (env) | mod_auth_openidc's crypto passphrase, at least 32 characters |
 
 ```sh
 docker run --rm -p 8080:8080 --env-file .env \
@@ -107,13 +134,45 @@ docker run --rm -p 8080:8080 --env-file .env \
   -v "$PWD/secrets:/run/drawbridge:ro" drawbridge-gateway
 ```
 
-Keys, certificates and IdP metadata are never in git. `OPEN_QUESTIONS.md` lists where each real one comes from.
+The secrets are never written into the rendered Apache config: it says `OIDCClientSecret "${DRAWBRIDGE_OIDC_CLIENT_SECRET}"`
+and Apache reads the value from its environment. Keys and secrets are never in git. `OPEN_QUESTIONS.md` lists where
+each real one comes from.
+
+### Register DRAWBRIDGE in Entra ID
+
+One app registration covers every app host. In the Entra admin center, under App registrations:
+
+1. **New registration.** Single tenant. Platform **Web**.
+2. **Redirect URIs.** One per app host: `https://<app host>/_drawbridge/oidc/callback` (for example
+   `https://app1.apps.wayne.edu/_drawbridge/oidc/callback`). Each host gets its own session, so each needs its own
+   redirect URI; add one whenever an app is added to the config. Leave the implicit grant boxes unticked: the gateway
+   uses the authorization code flow with PKCE.
+3. **Certificates & secrets.** Make a client secret and put it in the deployment's secret store as
+   `DRAWBRIDGE_OIDC_CLIENT_SECRET`. Note its expiry date: Entra secrets expire, and the gateway cannot sign anyone in
+   once it has (see `OPEN_QUESTIONS.md`, secret rotation).
+4. **Token configuration.** Add the optional ID token claims the config reads: `email`, `auth_time`, and `acrs` if any
+   path uses an authentication context. A deployment that wants a different `sub` (for example an `alias` claim) adds
+   it here and sets `oidc.user_claim`. Any directory extension (such as `wsuRoles`) is added the same way and listed
+   in `oidc.extra_claims`.
+5. **Overview.** Copy the Directory (tenant) ID into `oidc.issuer`
+   (`https://login.microsoftonline.com/<tenant-id>/v2.0`) and the Application (client) ID into `oidc.client_id`.
+   Neither is a secret, but neither belongs in this repository either.
+6. **Authentication contexts** (only if a path uses `auth_context`): in Conditional Access, create the context
+   (`c1` ...), and a policy that targets it with whatever it should demand.
 
 ## Configuration
 
-One YAML (or PHP array) file declares the gateway and each app. `config/drawbridge.example.yaml` is annotated.
+One YAML (or PHP array) file declares the gateway, the OpenID Connect provider and each app.
+`config/drawbridge.example.yaml` is annotated.
 
 ```yaml
+oidc:
+  issuer: https://login.microsoftonline.com/<tenant-id>/v2.0
+  client_id: <application-client-id>
+  client_secret_env: DRAWBRIDGE_OIDC_CLIENT_SECRET   # the NAME of the variable, never the secret
+  user_claim: preferred_username                     # or another claim, such as "alias", once Entra releases it
+  extra_claims: [wsuRoles]                           # copied into the assertion when present
+
 apps:
   - id: app1
     host: app1.apps.wayne.edu
@@ -121,9 +180,15 @@ apps:
     mode: assertion          # or "headers", or "both"
     default: login           # what a path with no rule gets
     public: [/up, /assets/]
-    protected: [/admin/]
+    protected: [/admin/, {path: /admin/payroll/, auth_context: c1}]
     api: [/api/]
 ```
+
+The `oidc` block also takes `metadata_url` (defaults to the issuer's `/.well-known/openid-configuration`),
+`attribute_claims` (which claim feeds `email`, `name` and `affiliations`; `null` turns one off) and `amr_map` (Entra
+`amr` values to the values SESAME's MFA check reads; the default maps `pwd`, `mfa`, `ngcmfa` as `mfa`, `otp`, `rsa`,
+`wia`, and the REFEDS MFA URI). The issuer must be https; plain http is accepted only for a `.test` host, which is what
+the local rig uses.
 
 Path rules are exact (`/up`) or prefix (a trailing slash, `/assets/`). There are no wildcards and no regular
 expressions. The longest rule wins, and an exact rule beats a prefix of the same length. Query strings are never part
@@ -136,16 +201,15 @@ of the match. A path with an encoded slash, a backslash, a semicolon, a control 
 |---|---|---|
 | `DRAWBRIDGE_CONFIG` | `/etc/drawbridge/drawbridge.yaml` | the per-app config file |
 | `DRAWBRIDGE_PORT` | `8080` | port Apache listens on (non-root, so above 1024) |
-| `DRAWBRIDGE_PUBLIC_SCHEME` | `https` | how browsers reach the gateway; feeds `ServerName`, `X-Forwarded-Proto`, metadata |
+| `DRAWBRIDGE_PUBLIC_SCHEME` | `https` | how browsers reach the gateway; feeds `ServerName`, `X-Forwarded-Proto`, the redirect URI |
 | `DRAWBRIDGE_PUBLIC_PORT` | empty | public port when it is not the scheme default |
 | `DRAWBRIDGE_COOKIE_SECURE` | `true` | Secure session cookie; `false` only for a plain-HTTP local rig |
 | `DRAWBRIDGE_TRUSTED_PROXIES` | empty | comma-separated CIDRs allowed to set `X-Forwarded-For`; empty trusts nobody |
-| `DRAWBRIDGE_IDP_METADATA_FILE` | `/run/drawbridge/idp-metadata.xml` | IdP metadata (mounted) |
-| `DRAWBRIDGE_SP_KEY_FILE` | `/run/drawbridge/sp.key` | SAML SP private key (mounted) |
-| `DRAWBRIDGE_SP_CERT_FILE` | `/run/drawbridge/sp.crt` | SAML SP certificate (mounted) |
+| `DRAWBRIDGE_OIDC_CLIENT_SECRET` | none, required | the Entra client secret (or whichever name `oidc.client_secret_env` gives) |
+| `DRAWBRIDGE_OIDC_CRYPTO_PASSPHRASE` | none, required | encrypts state cookies and sessions; 32+ characters; changing it signs everyone out |
 | `DRAWBRIDGE_SIGNING_KEY_FILE` | `/run/drawbridge/signing.key` | ES256 private key for assertions (mounted) |
 | `DRAWBRIDGE_SIGNING_KEY_ID` | `drawbridge-1` | `kid` in each token header; change it when the key changes |
-| `DRAWBRIDGE_SESSION_CACHE_ENTRIES` | `1000` | sessions held in memory (minimum 10) |
+| `DRAWBRIDGE_SESSION_CACHE_ENTRIES` | `1000` | entries in the shared-memory cache: sessions, nonces, provider metadata (minimum 10) |
 | `DRAWBRIDGE_RUN_DIR` | `/tmp/drawbridge` | scratch for rendered config, locks and the session cache |
 | `DRAWBRIDGE_LOG_LEVEL` | `warn` | Apache log level |
 
@@ -155,10 +219,9 @@ Run as `php bin/drawbridge <command>` (or `vendor/bin/drawbridge` when installed
 
 | Command | Does |
 |---|---|
-| `config:validate` | checks the config and prints every problem at once; exit 1 if any |
-| `explain <host> <path>` | says which rule applies to a request and why |
-| `render` | writes `apps.conf` and `policy.lua` for Apache (the entrypoint runs this) |
-| `sp:metadata` | prints the SAML SP metadata: one entity ID, one ACS per app host |
+| `config:validate` | checks the config and prints every problem at once, then the provider settings (never the secret, only whether its variable is set); exit 1 if any |
+| `explain <host> <path>` | says which rule applies to a request, and which authentication context it needs, and why |
+| `render` | checks the two secrets in the environment, then writes `apps.conf` and `policy.lua` for Apache (the entrypoint runs this) |
 | `keys:generate` | makes an ES256 key pair; refuses to overwrite a file |
 | `signer:map` | the long-running process behind Apache's `prg:` map (not for people) |
 
@@ -174,9 +237,12 @@ In Docker, with no local PHP:
 docker run --rm -v "${PWD}:/app" -w /app composer:2.10.3 sh -c "composer install --no-interaction && composer ci"
 ```
 
-The container rig runs the real gateway image with a throwaway SimpleSAMLphp IdP and a tiny echo app, and covers
-login, public and protected paths, header spoofing, path tricks, tampered SAML, signature checks against SESAME's
-`gateway` driver rules, and logout. Nothing in it reaches a real IdP.
+The container rig runs the real gateway image with a mock OpenID Connect provider
+([mock-oauth2-server](https://github.com/navikt/mock-oauth2-server), pinned) standing in for Entra, and a tiny echo
+app. It covers sign-in, public and protected paths, header spoofing (including forged `OIDC_*` headers), path tricks,
+forged callbacks, step-up to an authentication context, signature checks against SESAME's `gateway` driver rules, and
+logout. The mock signs in anyone with whatever claims the test types into its form, which is exactly what you want
+from a stunt double. Nothing in the rig reaches Entra.
 
 ```powershell
 rig\run.ps1          # Windows

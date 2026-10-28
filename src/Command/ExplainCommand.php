@@ -56,7 +56,16 @@ final class ExplainCommand extends Command
             return Command::SUCCESS;
         }
 
-        $output->writeln(sprintf('%s %s => %s (matched as %s)', $app->id, $path, $app->protectionFor($path)->value, $normalized));
+        $context = $app->ruleFor($path)?->authContext;
+
+        $output->writeln(sprintf(
+            '%s %s => %s%s (matched as %s)',
+            $app->id,
+            $path,
+            $app->protectionFor($path)->value,
+            $context !== null ? ", needs Entra authentication context {$context} in the ID token's acrs" : '',
+            $normalized,
+        ));
 
         return Command::SUCCESS;
     }

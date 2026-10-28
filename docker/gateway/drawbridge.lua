@@ -6,9 +6,10 @@
 --   guard  : first thing, every request. Refuses unsafe paths, drops every header the gateway owns, and
 --            reduces Connection to harmless tokens (a Connection token that names a header makes the proxy
 --            drop that header, which would let a client delete the assertion the gateway adds).
---   stamp  : after Mellon has authenticated, only where a session is required. Builds the signing request
---            for the PHP signer, or plain headers for apps in header mode.
---   scrub  : last stop before the proxy. The gateway session cookie is a bearer secret and never leaves.
+--   stamp  : after mod_auth_openidc has authenticated, only where a session is required. Checks the
+--            authentication context when the path needs one, then builds the signing request for the PHP
+--            signer, or plain headers for apps in header mode.
+--   scrub  : last stop before the proxy. The session and state cookies are bearer secrets and never leave.
 --   up     : the health check.
 
 local run_dir = os.getenv("DRAWBRIDGE_RUN_DIR") or "/tmp/drawbridge"
@@ -38,9 +39,35 @@ local function path_is_safe(raw)
   return true
 end
 
+local function has_prefix(name, prefixes)
+  for _, prefix in ipairs(prefixes) do
+    if name:sub(1, #prefix) == prefix then
+      return true
+    end
+  end
+  return false
+end
+
 function guard(r)
   if not path_is_safe(r.unparsed_uri or "") then
     return 400
+  end
+
+  -- Every header under an owned prefix goes, whatever comes after the prefix (an invented OIDC_CLAIM_isAdmin
+  -- too). headers_in_table gives a copy, so names are read from it and removed from the real table. Without it the
+  -- prefix rule cannot hold, so the request is refused rather than half guarded.
+  local listed = r.headers_in_table
+  if type(listed) == "function" then
+    listed = r:headers_in_table()
+  end
+  if type(listed) ~= "table" then
+    r:err("drawbridge: mod_lua has no headers_in_table; refusing the request")
+    return 500
+  end
+  for name, _ in pairs(listed) do
+    if has_prefix((name:lower():gsub("_", "-")), policy.strip_prefixes) then
+      r.headers_in[name] = nil
+    end
   end
 
   -- Apache's header table cannot be listed from Lua, so the generated list names every spelling to remove.
@@ -76,7 +103,19 @@ local function clean(value)
   return ((value or ""):gsub("%c", ""))
 end
 
-function stamp(r, args)
+-- Whether a claim mod_auth_openidc flattened into the environment (arrays joined with ",") lists a value.
+-- Membership, not equality: Entra's "acrs" can name several contexts at once.
+local function lists(flat, wanted)
+  for item in (flat or ""):gmatch("[^,]+") do
+    if trim(item) == wanted then
+      return true
+    end
+  end
+  return false
+end
+
+-- Require drawbridge-stamp [context]
+function stamp(r, context)
   if r.user == nil or r.user == "" then
     return apache2.AUTHZ_DENIED_NO_USER
   end
@@ -88,42 +127,40 @@ function stamp(r, args)
   end
 
   local env = r.subprocess_env
-  local subject = clean(env["MELLON_sub"])
-  if subject == "" then
-    subject = clean(r.user)
+
+  -- The module's "Require claim" already asked for this; asking again here means one lost line of config
+  -- cannot quietly drop the step-up.
+  if context ~= nil and context ~= "" then
+    if not lists(env[policy.claim_prefix .. "acrs"], context) then
+      return apache2.AUTHZ_DENIED
+    end
   end
+
+  local subject = clean(r.user)
   if subject == "" then
     r:err("drawbridge: a signed-in request has no subject")
     return apache2.AUTHZ_DENIED
   end
 
   if app.mode ~= "headers" then
-    -- Mellon hands the session over as base64 (MellonSessionDump). Decode it; the assertion XML is inside.
-    local session = env["MELLON_SESSION"] or ""
-    if session ~= "" and session:sub(1, 1) ~= "<" then
-      session = r:base64_decode(session) or ""
+    -- The validated ID token payload (OIDCPassIDTokenAs payload), JSON. The PHP signer reads the claims out of it.
+    local payload = env["OIDC_id_token_payload"] or ""
+    if payload == "" then
+      r:err("drawbridge: a signed-in request has no ID token payload")
+      return apache2.AUTHZ_DENIED
     end
-    local instant = session:match('AuthnInstant="([^"]*)"') or ""
-    local context = session:match("<[%w:]*AuthnContextClassRef[^>]*>([^<]*)<") or ""
-    local parts = {
-      "v1",
-      r:base64_encode(host),
-      r:base64_encode(subject),
-      r:base64_encode(clean(env["MELLON_email"])),
-      r:base64_encode(clean(env["MELLON_name"])),
-      r:base64_encode(clean(env["MELLON_affiliations"])),
-      r:base64_encode(clean(instant)),
-      r:base64_encode(clean(context)),
-    }
-    env["DRAWBRIDGE_SIGN_KEY"] = table.concat(parts, ".")
+    env["DRAWBRIDGE_SIGN_KEY"] = "v2." .. r:base64_encode(host) .. "." .. r:base64_encode(payload)
   end
 
   if app.mode ~= "assertion" then
     r.headers_in[policy.user_header] = subject
     for attribute, header in pairs(policy.attribute_headers) do
-      local value = clean(env["MELLON_" .. attribute])
-      if value ~= "" then
-        r.headers_in[header] = value
+      local claim = policy.attribute_claims[attribute]
+      if claim then
+        local value = clean(env[policy.claim_prefix .. claim])
+        if value ~= "" then
+          r.headers_in[header] = value
+        end
       end
     end
   end
@@ -132,7 +169,7 @@ function stamp(r, args)
 end
 
 function scrub(r)
-  -- The gateway's own endpoints (login, ACS, logout) need the session cookie; only proxied requests lose it.
+  -- The gateway's own endpoint (the OpenID Connect redirect URI, and logout) needs the cookies; only proxied requests lose them.
   if r.uri == "/_drawbridge" or r.uri:sub(1, 13) == "/_drawbridge/" then
     return apache2.DECLINED
   end
@@ -144,7 +181,7 @@ function scrub(r)
   local kept = {}
   for pair in cookie:gmatch("[^;]+") do
     local name = pair:match("^%s*([^=%s]+)")
-    if name and not policy.cookies[name] then
+    if name and not policy.cookies[name] and not has_prefix(name, policy.cookie_prefixes) then
       kept[#kept + 1] = (pair:gsub("^%s+", ""))
     end
   end

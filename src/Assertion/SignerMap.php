@@ -12,7 +12,7 @@ use Throwable;
  * Apache writes one line (a signing request) and reads back exactly one line:
  * a compact JWT, or the word NULL. NULL is what Apache sees when anything is
  * wrong, and the vhost config turns NULL into a 503, so a signer that cannot
- * sign never lets a request through unsigned (D33, fail closed).
+ * sign never lets a request through unsigned (fail closed).
  *
  * Nothing about the request goes to the log beyond a reason code: not the
  * subject, not the attributes, not the token.

@@ -47,7 +47,11 @@ final class GatewayTest extends RigTestCase
         $response = $this->raw(self::ECHO . ':' . self::PORT, '/');
 
         $this->assertContains($response['status'], [302, 303]);
-        $this->assertStringContainsString('/_drawbridge/sso/login', $response['headers']['location'] ?? '');
+        $location = $response['headers']['location'] ?? '';
+        $this->assertStringStartsWith(self::AUTHORIZE . '?', $location);
+        $this->assertStringContainsString('redirect_uri=' . rawurlencode('http://' . self::ECHO . ':' . self::PORT . '/_drawbridge/oidc/callback'), $location);
+        $this->assertStringContainsString('code_challenge_method=S256', $location);
+        $this->assertStringNotContainsString('claims=', $location, 'a path with no auth context asks for none');
     }
 
     public function testAnApiPathAnswers401InsteadOfARedirect(): void
@@ -82,11 +86,27 @@ final class GatewayTest extends RigTestCase
         $this->assertIsInt($claims['auth_time'] ?? null);
         $this->assertLessThanOrEqual(time() + 5, $claims['auth_time']);
         $this->assertMatchesRegularExpression('/^[0-9a-f]{32}$/', $claims['jti']);
+        $this->assertSame(['rig-tester'], $claims['wsuRoles'] ?? null, 'a configured extra claim is copied through');
+        $this->assertArrayNotHasKey('acrs', $claims, 'no authentication context was asked for or given');
 
         $parsed = (new Parser(new JoseEncoder()))->parse($vars['HTTP_X_SESAME_ASSERTION']);
         $this->assertInstanceOf(UnencryptedToken::class, $parsed);
         $this->assertSame('ES256', $parsed->headers()->get('alg'));
         $this->assertSame('rig-1', $parsed->headers()->get('kid'));
+    }
+
+    public function testNoOidcHeaderOrTokenEverReachesTheApp(): void
+    {
+        $browser = $this->browser();
+        $this->login($browser, self::ECHO);
+
+        foreach (['/admin/x', '/up'] as $path) {
+            $vars = $this->serverVars($this->seen($browser, self::ECHO, $path));
+            $leaks = array_filter(array_keys($vars), static fn(string $name): bool => stripos($name, 'OIDC') !== false);
+
+            $this->assertSame([], array_values($leaks), $path);
+            $this->assertStringNotContainsString('eyJ', implode(' ', array_diff_key($vars, ['HTTP_X_SESAME_ASSERTION' => true])), 'no provider token may reach the app on ' . $path);
+        }
     }
 
     public function testTheAssertionIsBoundToTheAppItWasMintedFor(): void
@@ -175,7 +195,7 @@ final class GatewayTest extends RigTestCase
 
         $this->assertSame(200, $this->raw(self::ECHO . ':' . self::PORT, '/admin/x', ['Cookie: ' . $cookie])['status']);
 
-        $browser->request('GET', 'http://' . self::ECHO . ':' . self::PORT . '/_drawbridge/sso/logout?ReturnTo=http%3A%2F%2F' . self::ECHO . '%3A' . self::PORT . '%2Fup');
+        $browser->request('GET', 'http://' . self::ECHO . ':' . self::PORT . '/_drawbridge/oidc/callback?logout=' . rawurlencode('http://' . self::ECHO . ':' . self::PORT . '/up'));
 
         $after = $this->raw(self::ECHO . ':' . self::PORT, '/admin/x', ['Cookie: ' . $cookie]);
         $this->assertContains($after['status'], [302, 303], 'the old session cookie must be dead after logout');
@@ -186,7 +206,7 @@ final class GatewayTest extends RigTestCase
         $browser = $this->browser();
         $this->login($browser, self::ECHO);
         $browser->followRedirects(false);
-        $browser->request('GET', 'http://' . self::ECHO . ':' . self::PORT . '/_drawbridge/sso/logout?ReturnTo=http%3A%2F%2Fevil.example.test%2F');
+        $browser->request('GET', 'http://' . self::ECHO . ':' . self::PORT . '/_drawbridge/oidc/callback?logout=' . rawurlencode('http://evil.example.test/'));
 
         $response = $browser->getResponse();
         $location = (string) $response->getHeader('Location');

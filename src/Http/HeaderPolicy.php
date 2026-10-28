@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Waynestate\Drawbridge\Http;
 
 use Waynestate\Drawbridge\Config\GatewayConfig;
+use Waynestate\Drawbridge\Config\OidcConfig;
 
 /**
  * Which request headers the gateway owns, and so removes from every request before auth runs.
@@ -14,15 +15,32 @@ use Waynestate\Drawbridge\Config\GatewayConfig;
  * the gateway sets itself, is dropped first; the gateway then adds back only
  * what it has proven. Names are compared after lower-casing and turning
  * underscores into hyphens, because PHP (and others) read "X_Authenticated_User"
- * and "X-Authenticated-User" as the same thing (D2, D3).
+ * and "X-Authenticated-User" as the same thing.
  *
  * The Lua enforcer inside Apache is generated from this class (see
  * LuaPolicyRenderer), so the rule has one source.
  */
 final class HeaderPolicy
 {
-    /** Prefixes the gateway owns outright. */
-    private const PREFIXES = ['x-authenticated-', 'x-drawbridge-', 'x-sesame-'];
+    /**
+     * Prefixes the gateway owns outright. "oidc-claim-" is mod_auth_openidc's claim prefix: the gateway passes claims
+     * to itself in the request environment, never in headers, so any such header came from a client.
+     */
+    private const PREFIXES = ['x-authenticated-', 'x-drawbridge-', 'x-sesame-', self::OIDC_CLAIM_PREFIX];
+
+    private const OIDC_CLAIM_PREFIX = 'oidc-claim-';
+
+    /** The token and payload names mod_auth_openidc uses. None of them may ever reach an app from anyone. */
+    private const OIDC_NAMES = [
+        'oidc-access-token', 'oidc-access-token-expires', 'oidc-refresh-token', 'oidc-id-token', 'oidc-id-token-payload',
+        'oidc-userinfo-json', 'oidc-userinfo-jwt', 'oidc-signed-jwt',
+    ];
+
+    /** Claim names an ID token commonly carries, joined to the claim prefix for the removal list. */
+    private const OIDC_CLAIM_WORDS = [
+        'iss', 'aud', 'exp', 'iat', 'nbf', 'nonce', 'auth-time', 'acr', 'acrs', 'azp', 'sid', 'oid', 'tid',
+        'preferred-username', 'unique-name', 'family-name', 'alias', 'wsuroles', 'ver', 'idp', 'hasgroups',
+    ];
 
     /** Identity headers other proxies and apps are known to trust. */
     private const IDENTITY = [
@@ -73,6 +91,7 @@ final class HeaderPolicy
             [self::normalize($assertionHeader), self::normalize($userHeader)],
             self::IDENTITY,
             self::FORWARDING,
+            self::OIDC_NAMES,
         );
         $prefixes = self::PREFIXES;
 
@@ -90,12 +109,19 @@ final class HeaderPolicy
         $this->prefixes = array_values(array_unique($prefixes));
     }
 
-    public static function fromConfig(GatewayConfig $gateway): self
+    public static function fromConfig(GatewayConfig $gateway, ?OidcConfig $oidc = null): self
     {
         $names = $gateway->extraStripHeaders;
 
         foreach ($gateway->attributeHeaders as $header) {
             $names[] = $header;
+        }
+
+        // Every claim the config names, under the claim prefix, so the explicit list covers them in every spelling.
+        if ($oidc !== null) {
+            foreach (array_merge([$oidc->userClaim], array_values($oidc->attributeClaims), $oidc->extraClaims) as $claim) {
+                $names[] = self::OIDC_CLAIM_PREFIX . $claim;
+            }
         }
 
         return new self($gateway->assertionHeader, $gateway->userHeader, $names);
@@ -131,7 +157,7 @@ final class HeaderPolicy
      *
      * A client that writes "Connection: X-Sesame-Assertion" would otherwise make
      * the proxy drop the assertion the gateway just added, because a proxy
-     * removes every header a Connection token names (D38).
+     * removes every header a Connection token names.
      */
     public function filterConnection(string $value): string
     {
@@ -172,7 +198,7 @@ final class HeaderPolicy
      * spelling, plus each owned prefix joined to the usual identity words. The names the gateway itself sets
      * are always in the list, which is what keeps a forged copy from ever reaching an app. A made-up
      * header under an owned prefix that nothing reads is the one thing this cannot catch; apps must read only
-     * the documented headers (D36).
+     * the documented headers.
      *
      * @return list<string>
      */
@@ -181,7 +207,9 @@ final class HeaderPolicy
         $base = $this->names;
 
         foreach ($this->prefixes as $prefix) {
-            foreach (self::PREFIX_WORDS as $word) {
+            $words = $prefix === self::OIDC_CLAIM_PREFIX ? array_merge(self::PREFIX_WORDS, self::OIDC_CLAIM_WORDS) : self::PREFIX_WORDS;
+
+            foreach ($words as $word) {
                 $base[] = $prefix . $word;
             }
         }

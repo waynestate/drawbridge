@@ -6,6 +6,7 @@ namespace Waynestate\Drawbridge\Render;
 
 use Waynestate\Drawbridge\Config\AppConfig;
 use Waynestate\Drawbridge\Config\Config;
+use Waynestate\Drawbridge\Config\PathRule;
 use Waynestate\Drawbridge\Config\Protection;
 
 /**
@@ -17,13 +18,20 @@ use Waynestate\Drawbridge\Config\Protection;
  * (never typed by hand), and the sections are emitted least specific first,
  * so the most specific rule is the one Apache applies last.
  *
+ * Sign-in is mod_auth_openidc, one OpenID Connect client for every app host.
  * Every protected section repeats the full directive set rather than leaning
  * on section merging: a rule that quietly inherited "public" from its parent
  * is the exact failure this gateway exists to prevent.
  */
 final class ApacheRenderer
 {
-    public const ENDPOINT_PATH = '/_drawbridge/sso';
+    public const ENDPOINT_PATH = '/_drawbridge/oidc';
+
+    /** The OpenID Connect redirect URI, relative, so each app host gets its own (register each one with the provider). */
+    public const REDIRECT_PATH = self::ENDPOINT_PATH . '/callback';
+
+    /** Claims reach the gateway in the request environment under this prefix, never in headers. */
+    public const CLAIM_PREFIX = 'OIDC_CLAIM_';
 
     public function render(Config $config, RenderOptions $options): string
     {
@@ -53,7 +61,11 @@ final class ApacheRenderer
             $options->signingKeyId,
         ));
         $out[] = '';
-        $out[] = 'MellonCacheSize ' . max(10, $options->sessionCacheEntries);
+
+        foreach ($this->provider($config, $options) as $line) {
+            $out[] = $line;
+        }
+
         $out[] = '';
 
         foreach ($this->defaultHost($options) as $line) {
@@ -69,6 +81,40 @@ final class ApacheRenderer
         }
 
         return implode("\n", $out) . "\n";
+    }
+
+    /**
+     * The provider and client, once for the whole server. No secret is written here: Apache fills the two
+     * "${...}" values in from its environment when it reads the config (RuntimeSecrets checks them first).
+     *
+     * @return list<string>
+     */
+    private function provider(Config $config, RenderOptions $options): array
+    {
+        $oidc = $config->oidc;
+
+        return [
+            '# OpenID Connect: one client for every app host. Secrets come from the environment, never from this file.',
+            'OIDCProviderMetadataURL ' . $this->quote($oidc->metadataUrl),
+            'OIDCClientID ' . $this->quote($oidc->clientId),
+            'OIDCClientSecret ' . $this->quote('${' . $this->envName($oidc->clientSecretEnv) . '}'),
+            'OIDCRedirectURI ' . $this->quote(self::REDIRECT_PATH),
+            // Said outright rather than read from discovery: Entra accepts it, and a provider document that names no
+            // method (as the rig's mock does) then cannot leave the choice open.
+            'OIDCProviderTokenEndpointAuth client_secret_basic',
+            'OIDCScope "openid profile email"',
+            'OIDCResponseType code',
+            'OIDCPKCEMethod S256',
+            'OIDCRemoteUserClaim ' . $this->quote($oidc->userClaim),
+            'OIDCClaimPrefix ' . $this->quote(self::CLAIM_PREFIX),
+            // The module wants a passphrase at server level too. Each app host overrides it with its own below.
+            'OIDCCryptoPassphrase ' . $this->quote('${' . RenderOptions::CRYPTO_PASSPHRASE_ENV . '}|drawbridge-default.invalid'),
+            // Server-side sessions in shared memory, encrypted, so a session is only ever readable with its own host's passphrase.
+            'OIDCSessionType server-cache',
+            'OIDCCacheType shm',
+            'OIDCCacheEncrypt On',
+            'OIDCCacheShmMax ' . max(10, $options->sessionCacheEntries),
+        ];
     }
 
     /**
@@ -98,6 +144,9 @@ final class ApacheRenderer
     private function appHost(Config $config, AppConfig $app, RenderOptions $options): array
     {
         $public = $app->host . ($options->publicPort !== null ? ':' . $options->publicPort : '');
+        $gateway = $config->gateway;
+        $cookie = ($options->secureCookies ? '__Host-' : '') . $gateway->sessionCookie;
+
         $out = [
             '# App: ' . $app->id,
             '<VirtualHost *:' . $options->port . '>',
@@ -116,11 +165,21 @@ final class ApacheRenderer
             '    RequestHeader set X-Forwarded-Host ' . $this->quote($public),
             '    RequestHeader set X-Forwarded-For "expr=%{REMOTE_ADDR}"',
             '',
+            '    # One session per app host. The sessions share one cache, so each host encrypts its own with a passphrase',
+            '    # of its own: a session cookie carried to another host finds nothing it can read there.',
+            '    OIDCCryptoPassphrase ' . $this->quote('${' . RenderOptions::CRYPTO_PASSPHRASE_ENV . '}|' . $app->host),
+            '    OIDCCookie ' . $this->quote($cookie),
+            '    OIDCStateCookiePrefix ' . $this->quote($gateway->sessionCookie . '_state_'),
+            '    OIDCCookieSameSite Lax',
+            '    OIDCCookieHTTPOnly On',
+            '    OIDCSessionMaxDuration ' . $gateway->sessionSeconds,
+            '    OIDCSessionInactivityTimeout ' . $gateway->idleSeconds,
+            '',
             '    # The default for any path no rule names.',
             '    <Location "/">',
         ];
 
-        foreach ($this->protectionBlock($config, $app, $app->default, $options) as $line) {
+        foreach ($this->protectionBlock($config, $app, $app->default, null) as $line) {
             $out[] = '        ' . $line;
         }
 
@@ -128,10 +187,10 @@ final class ApacheRenderer
 
         foreach ($app->rules as $rule) {
             $out[] = '';
-            $out[] = '    # ' . ($rule->isPrefix() ? 'prefix ' : 'exact ') . $rule->path . ' => ' . $rule->protection->value;
+            $out[] = '    # ' . $this->describe($rule);
             $out[] = '    <LocationMatch ' . $this->quote($rule->apachePattern()) . '>';
 
-            foreach ($this->protectionBlock($config, $app, $rule->protection, $options) as $line) {
+            foreach ($this->protectionBlock($config, $app, $rule->protection, $rule->authContext) as $line) {
                 $out[] = '        ' . $line;
             }
 
@@ -139,45 +198,81 @@ final class ApacheRenderer
         }
 
         $out[] = '';
-        $out[] = '    # Mellon\'s own endpoints (login, ACS, logout, metadata). Last, so no path rule can lock them.';
+        $out[] = '    # mod_auth_openidc\'s own endpoint (the redirect URI, which also handles logout). Last, so no path rule can lock it.';
         $out[] = '    <Location ' . $this->quote(self::ENDPOINT_PATH) . '>';
-
-        foreach ($this->mellon($config, 'info', $options) as $line) {
-            $out[] = '        ' . $line;
-        }
-
+        $out[] = '        AuthType openid-connect';
+        $out[] = '        OIDCPassClaimsAs none';
+        $out[] = '        Require valid-user';
         $out[] = '        RewriteEngine Off';
-        $out[] = '        Require all granted';
         $out[] = '    </Location>';
         $out[] = '</VirtualHost>';
 
         return $out;
     }
 
+    private function describe(PathRule $rule): string
+    {
+        return ($rule->isPrefix() ? 'prefix ' : 'exact ') . $rule->path . ' => ' . $rule->protection->value
+            . ($rule->authContext !== null ? ' (auth context ' . $rule->authContext . ')' : '');
+    }
+
     /**
      * @return list<string>
      */
-    private function protectionBlock(Config $config, AppConfig $app, Protection $protection, RenderOptions $options): array
+    private function protectionBlock(Config $config, AppConfig $app, Protection $protection, ?string $authContext): array
     {
         if ($protection === Protection::Open) {
-            // Public means no identity at all: info mode attaches a session but no Require is set, so nothing is signed.
+            // Public means no identity at all: no Require for a user, so mod_auth_openidc never runs and nothing is signed.
             // A child section inherits its parent's rewrite rules unless it says otherwise: turn them off, so a public
             // path never asks the signer for an assertion it has no session to sign.
-            return array_merge($this->mellon($config, 'info', $options), ['RewriteEngine Off', 'Require all granted']);
+            return ['AuthType openid-connect', 'OIDCUnAuthAction pass', 'OIDCPassClaimsAs none', 'RewriteEngine Off', 'Require all granted'];
         }
 
-        $lines = array_merge(
-            ['AuthType Mellon'],
-            $this->mellon($config, $protection === Protection::Api ? 'info' : 'auth', $options),
-            // The stamp provider reads the signed-in session and prepares what the proxy will send on.
-            ['<RequireAll>', '    Require valid-user', '    Require drawbridge-stamp', '</RequireAll>'],
-        );
+        $api = $protection === Protection::Api;
+
+        $lines = [
+            'AuthType openid-connect',
+            // An api caller gets a plain 401; a browser is sent to sign in (the module answers 401 itself to requests
+            // that plainly cannot follow a sign-in redirect, such as XHR).
+            'OIDCUnAuthAction ' . ($api ? '401' : 'auth'),
+            // Claims go to the request environment for the stamp, never to headers, and no token is passed on.
+            'OIDCPassClaimsAs environment none',
+            'OIDCPassIDTokenAs claims payload',
+            'OIDCPassUserInfoAs claims',
+            'OIDCPassAccessToken Off',
+            'OIDCPassRefreshToken Off',
+        ];
+
+        $require = ['<RequireAll>', '    Require valid-user'];
+
+        if ($authContext !== null) {
+            // Ask the provider for the context on sign-in from here, and require it in the ID token's "acrs" array.
+            // A session without it is sent back to sign in again (step-up); an api caller gets 401.
+            $lines[] = 'OIDCPathAuthRequestParams ' . $this->quote('claims=' . rawurlencode(self::contextRequest($authContext)));
+            $lines[] = 'OIDCUnAutzAction ' . ($api ? '401' : 'auth');
+            $require[] = '    Require claim ' . $this->value('acrs:' . $authContext);
+        }
+
+        // The stamp provider reads the signed-in session and prepares what the proxy will send on. With a context it
+        // checks "acrs" again itself, so the context holds even if the claim check above were ever lost.
+        $require[] = '    Require drawbridge-stamp' . ($authContext !== null ? ' ' . $this->value($authContext) : '');
+        $require[] = '</RequireAll>';
+
+        $lines = array_merge($lines, $require);
 
         if ($app->sendsAssertion()) {
             $lines = array_merge($lines, $this->signing($config));
         }
 
         return $lines;
+    }
+
+    /**
+     * The OpenID Connect "claims" request for one Entra authentication context.
+     */
+    public static function contextRequest(string $authContext): string
+    {
+        return (string) json_encode(['id_token' => ['acrs' => ['essential' => true, 'value' => $authContext]]], JSON_UNESCAPED_SLASHES);
     }
 
     /**
@@ -199,37 +294,13 @@ final class ApacheRenderer
         ];
     }
 
-    /**
-     * @return list<string>
-     */
-    private function mellon(Config $config, string $mode, RenderOptions $options): array
+    private function envName(string $name): string
     {
-        $gateway = $config->gateway;
-        $cookie = ($options->secureCookies ? '__Host-' : '') . $gateway->sessionCookie;
-
-        $lines = [
-            'MellonEnable ' . $this->quote($mode),
-            'MellonEndpointPath ' . $this->quote(self::ENDPOINT_PATH),
-            'MellonSPentityId ' . $this->quote($gateway->spEntityId),
-            'MellonSPPrivateKeyFile ' . $this->quote($options->spKeyFile),
-            'MellonSPCertFile ' . $this->quote($options->spCertFile),
-            'MellonIdPMetadataFile ' . $this->quote($options->idpMetadataFile),
-            'MellonVariable ' . $this->quote($cookie),
-            'MellonSecureCookie ' . ($options->secureCookies ? 'On' : 'Off'),
-            'MellonCookieSameSite Lax',
-            'MellonSessionLength ' . $gateway->sessionSeconds,
-            'MellonSessionIdleTimeout ' . $gateway->idleSeconds,
-            'MellonRedirectDomains [self]',
-            'MellonUser "NAME_ID"',
-            'MellonMergeEnvVars On "|"',
-            'MellonSessionDump On',
-        ];
-
-        foreach (['sub', 'email', 'name', 'affiliations'] as $key) {
-            $lines[] = 'MellonSetEnv ' . $this->quote($key) . ' ' . $this->quote($gateway->attributes[$key]);
+        if (preg_match('/^[A-Z_][A-Z0-9_]*$/', $name) !== 1) {
+            throw new \InvalidArgumentException('An environment variable name has characters that cannot go into the Apache config.');
         }
 
-        return $lines;
+        return $name;
     }
 
     /**
