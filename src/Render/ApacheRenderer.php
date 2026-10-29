@@ -127,12 +127,19 @@ final class ApacheRenderer
             '<VirtualHost *:' . $options->port . '>',
             '    ServerName drawbridge-default.invalid',
             '    DocumentRoot /var/empty',
+            // This host proxies nothing, so every answer on it is the gateway's own and carries its headers.
+            '    # The gateway answers everything on this host itself: no caching, and sniffing refused.',
+            '    Header always setifempty X-Content-Type-Options ' . $this->quote('nosniff'),
+            '    Header always set Cache-Control ' . $this->quote('no-store'),
             '    <Location "/">',
             '        Require all denied',
             '    </Location>',
             '    <Location "/_drawbridge/up">',
             '        Require all granted',
             '        LuaMapHandler "^/_drawbridge/up$" /etc/drawbridge/drawbridge.lua up',
+            '        # The gateway answers this one itself: no caching, no framing.',
+            '        Header always set Cache-Control ' . $this->quote('no-store'),
+            '        Header always set Content-Security-Policy ' . $this->quote("frame-ancestors 'none'"),
             '    </Location>',
             '</VirtualHost>',
         ];
@@ -147,6 +154,23 @@ final class ApacheRenderer
         $gateway = $config->gateway;
         $cookie = ($options->secureCookies ? '__Host-' : '') . $gateway->sessionCookie;
 
+        // Response headers the gateway adds to the proxied answer. setifempty: an app that sends its own (through
+        // HELMET) keeps it, and the gateway only fills what is missing.
+        $headers = [
+            '',
+            '    # Response headers the gateway adds to the proxied answer. setifempty: an app that sends its own',
+            '    # (through HELMET) keeps it; the gateway only fills what is missing.',
+            '    Header always setifempty X-Content-Type-Options ' . $this->quote('nosniff'),
+            '    Header always setifempty Referrer-Policy ' . $this->quote('strict-origin-when-cross-origin'),
+        ];
+
+        if ($options->scheme === 'https') {
+            // No includeSubDomains, no preload: the gateway serves many hosts and must not decide that for them.
+            $headers[] = '    Header always setifempty Strict-Transport-Security ' . $this->quote('max-age=31536000');
+        }
+
+        $headers[] = '';
+
         $out = [
             '# App: ' . $app->id,
             '<VirtualHost *:' . $options->port . '>',
@@ -159,7 +183,7 @@ final class ApacheRenderer
             '    ProxyPass "/_drawbridge/" "!"',
             '    ProxyPass "/" ' . $this->quote($app->upstream . '/'),
             '    ProxyPassReverse "/" ' . $this->quote($app->upstream . '/'),
-            '',
+            ...$headers,
             '    # The strip hook has already removed every inbound forwarding header; these are the gateway\'s own view.',
             '    RequestHeader set X-Forwarded-Proto ' . $this->quote($options->scheme),
             '    RequestHeader set X-Forwarded-Host ' . $this->quote($public),
@@ -204,6 +228,10 @@ final class ApacheRenderer
         $out[] = '        OIDCPassClaimsAs none';
         $out[] = '        Require valid-user';
         $out[] = '        RewriteEngine Off';
+        // The gateway answers this path itself (sign-in, callback, logout): its own cache and framing rules,
+        // set plainly because no app header is expected here.
+        $out[] = '        Header always set Cache-Control ' . $this->quote('no-store');
+        $out[] = '        Header always set Content-Security-Policy ' . $this->quote("frame-ancestors 'none'");
         $out[] = '    </Location>';
         $out[] = '</VirtualHost>';
 
