@@ -393,10 +393,10 @@ h1, h2, h3 { color: var(--db-ink); }
 .gate .tick { stroke: var(--db-slate); stroke-width: 1.4; fill: none; }
 .gate .arrow-head { fill: none; stroke: var(--db-ink); stroke-width: 1.5; }
 .gate .leader { fill: none; stroke: var(--db-ink); stroke-width: 1; }
-.gate .anno { font: 400 15px/1 var(--db-hand); fill: var(--db-ink); }
-.gate .anno--dim { font-size: 13px; fill: var(--db-text-2); text-anchor: middle; }
-.gate .anno--small { font-size: 13px; fill: var(--db-text-2); }
-.gate .anno--in { font-size: 13px; }
+.gate .anno { font: 400 16px/1 var(--db-hand); fill: var(--db-ink); paint-order: stroke fill; stroke: var(--db-sheet); stroke-width: 4px; stroke-linejoin: round; } /* a sheet-coloured halo lifts the hand off the grid */
+.gate .anno--dim { font-size: 16px; fill: var(--db-text); text-anchor: middle; }
+.gate .anno--small { font-size: 16px; fill: var(--db-text); }
+.gate .anno--in { font-size: 15px; }
 .gate .idp__box { fill: var(--db-sheet); stroke: var(--db-slate); stroke-width: 1.2; stroke-dasharray: 5 4; }
 .gate .idp__name { font-size: 14px; }
 .gate .idp__trip { fill: none; stroke: var(--db-ink); stroke-width: 1.4; stroke-dasharray: 5 5; opacity: 0; transition: opacity 0.4s; }
