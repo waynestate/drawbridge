@@ -44,7 +44,7 @@ decisions written down.
 | PREFLIGHT | the shared CI components |
 | SESAME | sign-in inside the app; its `gateway` driver verifies what DRAWBRIDGE signs |
 | HELMET | security headers and CSP reporting |
-| Pinstripe | the Laravel example that wears all of it |
+| Pinstripe | the coding standard presets (Pint, PHPStan, ESLint, Rector) |
 | Sourdough | the starter that keeps the stack fed |
 | **DRAWBRIDGE** | **the one OpenID Connect front door for the Citadel** |
 

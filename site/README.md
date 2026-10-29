@@ -12,7 +12,7 @@ from anywhere (Citadel, any web server, or `python -m http.server` inside `site/
   A-801) and the footer is the drawing's title block.
 - base: WayneUI 2.0.8, copied from its static path into `assets/wayne-ui/` (tokens, Lato, container, buttons, tabs,
   table wrapper, skip link, sr-only), then re-dressed in `assets/drawbridge.css`.
-- magic: the hero is section A–A through the gatehouse, with the mark in a detail callout ("1 · enlarged"). The
+- magic: the hero is section A-A through the gatehouse, with the mark in a detail callout ("1 · enlarged"). The
   sheet inks itself in, forged identity headers are thrown at the raised bridge and bounce off into the moat, then a
   visitor signs in (an OpenID Connect round trip to Entra ID, off this sheet, by others), the bridge comes down on its gold chain,
   and the visitor walks through the guard, the OpenID Connect client and the signer, picking up a `drawbridge+jwt`. **Sign in / Sign
