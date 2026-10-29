@@ -41,16 +41,17 @@ oidc:
   # The NAME of the environment variable that holds the client secret. Never the secret itself.
   client_secret_env: DRAWBRIDGE_OIDC_CLIENT_SECRET
 
-  # The ID token claim that becomes "sub" (and X-Authenticated-User). preferred_username is Entra's default sign-in
-  # name. A deployment that wants the AccessID would add Entra's "alias" as an optional claim and set it here.
-  user_claim: preferred_username
+  # The ID token claim that becomes "sub" (and X-Authenticated-User). The example uses accessid, the AccessID, which
+  # your Entra admin adds as an optional claim (transformed from the user principal name with ExtractMailPrefix).
+  # preferred_username still works for a tenant that does not send accessid.
+  user_claim: accessid
   # Which ID token claim feeds each attribute. Set one to null to never send it. affiliations has no default.
   attribute_claims:
     email: email
     name: name
   # ID token claims copied into the assertion under the same name when present (strings, numbers or lists of them).
-  # extra_claims: [wsuRoles]
-  extra_claims: []
+  # wsuRoles comes from on-premises AD through a mapped claim (acceptMappedClaims), so no custom signing key is needed.
+  extra_claims: [wsuRoles]
 
   # Entra "amr" values -> the "amr" values SESAME's MFA check reads. The default covers pwd, mfa, ngcmfa (as mfa),
   # otp, rsa, wia and the REFEDS MFA URI. An unknown value gives no amr, never a guessed "mfa".

@@ -71,7 +71,8 @@ browser --> Apache httpd (DRAWBRIDGE) --> app container
 - mod_auth_openidc checks the ID token (signature, issuer, audience, nonce, expiry) and keeps the session. The
   claims reach the gateway in the request environment only, never as headers, and no Entra token is passed to an app.
 - The assertion is a compact JWT with `typ: drawbridge+jwt` and a `kid`. Claims: `iss` (DRAWBRIDGE, never Entra),
-  `aud` (the app's host), `sub` (the configured user claim, `preferred_username` by default), `iat`, `nbf`, `exp`
+  `aud` (the app's host), `sub` (the configured user claim, `accessid` in the example config and `preferred_username`
+  if unset), `iat`, `nbf`, `exp`
   (60 seconds by default), `jti`; `auth_time`, `amr` and `acrs` when the ID token carries them; `email`, `name` and
   `affiliations` when configured; and any `extra_claims` (for example `wsuRoles`). A new one is minted for every
   request, and only from an ID token whose `iss` is the configured provider.
@@ -167,10 +168,12 @@ One app registration covers every app host. In the Entra admin center, under App
 3. **Certificates & secrets.** Make a client secret and put it in the deployment's secret store as
    `DRAWBRIDGE_OIDC_CLIENT_SECRET`. Note its expiry date: Entra secrets expire, and the gateway cannot sign anyone in
    once it has (see `OPEN_QUESTIONS.md`, secret rotation).
-4. **Token configuration.** Add the optional ID token claims the config reads: `email`, `auth_time`, and `acrs` if any
-   path uses an authentication context. A deployment that wants a different `sub` (for example an `alias` claim) adds
-   it here and sets `oidc.user_claim`. Any directory extension (such as `wsuRoles`) is added the same way and listed
-   in `oidc.extra_claims`.
+4. **Token configuration.** Add the optional ID token claims the config reads: `accessid` (the AccessID, transformed
+   from the user principal name with `ExtractMailPrefix`; this is what the example config uses for `oidc.user_claim`),
+   `email`, `auth_time`, and `acrs` if any path uses an authentication context. Add `wsuRoles` as a mapped claim (it
+   comes from an on-premises AD attribute) and set `acceptMappedClaims: true` in the app manifest, so no custom
+   signing key is needed and the metadata URL stays plain; list it in `oidc.extra_claims`. A tenant that does not
+   send `accessid` leaves `oidc.user_claim` at `preferred_username`.
 5. **Overview.** Copy the Directory (tenant) ID into `oidc.issuer`
    (`https://login.microsoftonline.com/<tenant-id>/v2.0`) and the Application (client) ID into `oidc.client_id`.
    Neither is a secret, but neither belongs in this repository either.
@@ -206,7 +209,7 @@ oidc:
   issuer: https://login.microsoftonline.com/<tenant-id>/v2.0
   client_id: <application-client-id>
   client_secret_env: DRAWBRIDGE_OIDC_CLIENT_SECRET   # the NAME of the variable, never the secret
-  user_claim: preferred_username                     # or another claim, such as "alias", once Entra releases it
+  user_claim: accessid                               # the AccessID; preferred_username for a tenant that does not send it
   extra_claims: [wsuRoles]                           # copied into the assertion when present
 
 apps:

@@ -12,7 +12,8 @@ oidc:
   issuer: http://idp.test:8080/entra
   client_id: drawbridge-rig
   client_secret_env: DRAWBRIDGE_OIDC_CLIENT_SECRET
-  user_claim: preferred_username
+  # The mock provider signs in with whatever claims the tests type in; the tests send accessid, like the tenant does.
+  user_claim: accessid
   attribute_claims:
     affiliations: affiliations
   extra_claims: [wsuRoles]
