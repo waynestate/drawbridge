@@ -2,6 +2,7 @@
 /.phpunit.result.cache
 /.phpunit.cache/
 /.env
+.env.playbook
 # Keys and certificates are generated at test time and never committed.
 /rig/.generated/
 /build/

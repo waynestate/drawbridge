@@ -225,6 +225,46 @@ docker inspect --format='{{index .RepoDigests 0}}' <this project's registry>/gat
 The image carries OCI labels (`org.opencontainers.image.source`, `.revision`, `.version`, `.licenses`) set from the
 pipeline's commit; a local `docker build` leaves them empty.
 
+## WSU values (Playbook)
+
+A drawbridge lifts for barges it knows; these two settings tell it who is
+coming. Both carry Wayne State's shared values, and both come from
+[Playbook](https://git.wayne.edu/enterprise-apps/playbook), the private
+repository of the university's shared `KEY=value` lines: never secrets, never
+per-app values. Drawbridge does not read Playbook in code; it is where a
+person looks up the values to type into `config/drawbridge.yaml` and `.env`.
+
+| Playbook key | Drawbridge setting | Where it goes |
+|---|---|---|
+| `SESAME_OAUTH2_ISSUER` | `oidc.issuer` | `config/drawbridge.yaml`: the Entra issuer for the Wayne State tenant. Copy it from Playbook; never write a tenant id by hand. |
+| `HELMET_PROXIES` | `DRAWBRIDGE_TRUSTED_PROXIES` | `.env`: the front proxy addresses, comma-separated CIDRs. |
+
+**curl (Linux, macOS).**
+
+```
+curl --fail -H "PRIVATE-TOKEN: $GITLAB_TOKEN" "https://git.wayne.edu/api/v4/projects/enterprise-apps%2Fplaybook/repository/files/playbook.env/raw?ref=main" -o .env.playbook
+```
+
+**PowerShell (Windows).**
+
+```powershell
+Invoke-WebRequest -Headers @{ 'PRIVATE-TOKEN' = $env:GITLAB_TOKEN } -Uri "https://git.wayne.edu/api/v4/projects/enterprise-apps%2Fplaybook/repository/files/playbook.env/raw?ref=main" -OutFile .env.playbook
+```
+
+**A clone.**
+
+```
+git clone https://git.wayne.edu/enterprise-apps/playbook.git
+```
+
+The curl and PowerShell commands download the values to `.env.playbook`; copy
+the two you need out of it. The secrets (`DRAWBRIDGE_OIDC_CLIENT_SECRET`,
+`DRAWBRIDGE_OIDC_CRYPTO_PASSPHRASE`, `DRAWBRIDGE_METRICS_TOKEN`), the client
+id and the signing key are never in Playbook. The token is your own: `read_api`
+for curl, `read_repository` for clone.
+
+Playbook is private on git.wayne.edu. If you get a 404, ask the Enterprise Applications team for read access.
+
 ## Configuration
 
 One YAML (or PHP array) file declares the gateway, the OpenID Connect provider and each app.
