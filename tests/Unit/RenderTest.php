@@ -348,6 +348,17 @@ final class RenderTest extends TestCase
         $this->assertStringContainsString('Header always setifempty X-Content-Type-Options "nosniff"', $block);
     }
 
+    public function testTheDefaultHostLetsTheErrorPagesThrough(): void
+    {
+        $conf = (new ApacheRenderer())->render(Fixtures::config(), $this->options());
+        $start = strpos($conf, '<Location "/_drawbridge/errors/">');
+
+        $this->assertNotFalse($start);
+        $block = $this->locationBlock($conf, (int) $start);
+
+        $this->assertStringContainsString('Require all granted', $block);
+    }
+
     /** The rendered virtual host for one app: from its "# App:" comment to the next app or the end of the file. */
     private function appHostBlock(string $conf, string $id): string
     {

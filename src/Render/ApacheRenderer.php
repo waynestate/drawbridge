@@ -141,6 +141,11 @@ final class ApacheRenderer
             '        Header always set Cache-Control ' . $this->quote('no-store'),
             '        Header always set Content-Security-Policy ' . $this->quote("frame-ancestors 'none'"),
             '    </Location>',
+            // The unknown-host 403 uses the custom page. The deny on "/" above matches this path too, so the
+            // directory grant in httpd.conf alone would not let it through.
+            '    <Location "/_drawbridge/errors/">',
+            '        Require all granted',
+            '    </Location>',
             '</VirtualHost>',
         ];
     }
