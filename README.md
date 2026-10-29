@@ -268,6 +268,8 @@ Run as `php bin/drawbridge <command>` (or `vendor/bin/drawbridge` when installed
 
 ## Run the checks
 
+Maintainers: how to build, test and release this project, and where its data comes from, is in [MAINTAINING.md](MAINTAINING.md).
+
 ```sh
 composer ci          # manifest, unit tests, Pint, PHPStan level 8, composer audit
 ```
