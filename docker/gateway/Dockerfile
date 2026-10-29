@@ -38,9 +38,11 @@ COPY --from=vendor /app /opt/drawbridge
 COPY docker/gateway/httpd.conf /etc/drawbridge/httpd.conf
 COPY docker/gateway/drawbridge.lua /etc/drawbridge/drawbridge.lua
 COPY docker/gateway/entrypoint.sh /usr/local/bin/drawbridge-entrypoint
+COPY docker/gateway/errors/ /etc/drawbridge/errors/
 RUN chmod 0755 /usr/local/bin/drawbridge-entrypoint /opt/drawbridge/bin/drawbridge \
     && mkdir -p /tmp/drawbridge /var/empty \
-    && chgrp -R 0 /tmp/drawbridge && chmod -R g=u /tmp/drawbridge
+    && chgrp -R 0 /tmp/drawbridge && chmod -R g=u /tmp/drawbridge \
+    && chmod 0755 /etc/drawbridge/errors && chmod 0644 /etc/drawbridge/errors/*.html
 
 # Any non-root UID works (OpenShift assigns one): state lives under /tmp/drawbridge, group 0 can write it.
 USER 1001:0
