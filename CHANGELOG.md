@@ -33,8 +33,8 @@ same signed assertion for SESAME; only the rope to the identity provider is new.
 - Coding standard: the hand-copied PHPStan settings are replaced by an include of Pinstripe's raw PHP cut
   (`waynestate/pinstripe` is now a dev dependency, and `phpstan.neon` keeps only this repository's paths and PHP
   version range). Two findings from the preset's added deprecation and @var checks are fixed: the signer builds JWTs
-   with `Builder::new()` instead of the deprecated lcobucci/jwt constructor, and the metrics allow-list keeps its
-   runtime entry validation in a dedicated helper.
+  with `Builder::new()` instead of the deprecated lcobucci/jwt constructor, and the metrics allow-list keeps its
+  runtime entry validation in a dedicated helper.
 - Changed: project names written as words except acronyms.
 
 ### Added
