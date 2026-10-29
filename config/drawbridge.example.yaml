@@ -33,6 +33,7 @@ gateway:
 # The OpenID Connect provider: Microsoft Entra ID, one app registration for the whole gateway.
 oidc:
   # Entra's v2.0 issuer: https://login.microsoftonline.com/<tenant-id>/v2.0 . The zeros are a placeholder, not a tenant.
+  # The tenant id comes from Playbook (SESAME_OAUTH2_ISSUER); see the README, WSU values (Playbook).
   issuer: https://login.microsoftonline.com/00000000-0000-0000-0000-000000000000/v2.0
   # Defaults to <issuer>/.well-known/openid-configuration, which is right for Entra.
   # metadata_url: https://login.microsoftonline.com/00000000-0000-0000-0000-000000000000/v2.0/.well-known/openid-configuration
