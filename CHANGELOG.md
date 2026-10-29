@@ -36,6 +36,9 @@ same signed assertion for SESAME; only the rope to the identity provider is new.
   with `Builder::new()` instead of the deprecated lcobucci/jwt constructor, and the metrics allow-list keeps its
   runtime entry validation in a dedicated helper.
 - Changed: project names written as words except acronyms.
+- Changed: the deploy layer's Squire kit is refreshed to 0.3.3 with Squire's own update command: `.env.squire.example`
+  takes the new template, and the scripts this repository edited for the word-name rule were left alone,
+  `scripts/release.sh` among them (it keeps the 0.1.0 release behaviour until the 0.3.x options are wanted).
 
 ### Added
 

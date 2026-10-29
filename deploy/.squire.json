@@ -1,13 +1,13 @@
 {
     "squire": "Written by SQUIRE. Commit this file: `vendor/bin/squire init --check` reads it to report drift.",
-    "version": "0.1.0",
+    "version": "0.3.3",
     "target": "raw",
     "groups": [
         "release",
         "parity"
     ],
     "files": {
-        ".env.squire.example": "f920d86e274ba02f7c82f5f4fb9cc1bda0937eabdea6002c3839ab0fc66b1de3",
+        ".env.squire.example": "48a660a9052290cd388e9ddd3914b0324ac99ed967adcfbed69bf2db6f72a4a6",
         ".squire/Dockerfile": "460ceb25f47481b9a209ec28db709565022c601a3ee3a603d3ff8dbc45ff47fa",
         ".squire/Dockerfile.dockerignore": "6ccbb5a302475dd6322dc9f46057f98d0a5db59e5cfcc334d956df862d5da6fe",
         ".squire/base-fallback.Dockerfile": "8f02eb4146deb0b66ed13ba57e6d98ebd64bdc97867f993abab25a1ea7b16109",
