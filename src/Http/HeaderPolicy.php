@@ -39,7 +39,7 @@ final class HeaderPolicy
     /** Claim names an ID token commonly carries, joined to the claim prefix for the removal list. */
     private const OIDC_CLAIM_WORDS = [
         'iss', 'aud', 'exp', 'iat', 'nbf', 'nonce', 'auth-time', 'acr', 'acrs', 'azp', 'sid', 'oid', 'tid',
-        'preferred-username', 'unique-name', 'family-name', 'alias', 'wsuroles', 'ver', 'idp', 'hasgroups',
+        'preferred-username', 'unique-name', 'family-name', 'alias', 'wsuroles', 'wsu_roles', 'ver', 'idp', 'hasgroups',
     ];
 
     /** Identity headers other proxies and apps are known to trust. */

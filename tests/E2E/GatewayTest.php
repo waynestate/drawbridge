@@ -86,7 +86,7 @@ final class GatewayTest extends RigTestCase
         $this->assertIsInt($claims['auth_time'] ?? null);
         $this->assertLessThanOrEqual(time() + 5, $claims['auth_time']);
         $this->assertMatchesRegularExpression('/^[0-9a-f]{32}$/', $claims['jti']);
-        $this->assertSame(['rig-tester'], $claims['wsuRoles'] ?? null, 'a configured extra claim is copied through');
+        $this->assertSame(['rig-tester'], $claims['wsu_roles'] ?? null, 'a configured extra claim is copied through');
         $this->assertArrayNotHasKey('acrs', $claims, 'no authentication context was asked for or given');
 
         $parsed = (new Parser(new JoseEncoder()))->parse($vars['HTTP_X_SESAME_ASSERTION']);

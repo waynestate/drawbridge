@@ -16,7 +16,7 @@ oidc:
   user_claim: accessid
   attribute_claims:
     affiliations: affiliations
-  extra_claims: [wsuRoles]
+  extra_claims: [wsu_roles]
 
 apps:
   # The main case: a signed assertion, login required by default.

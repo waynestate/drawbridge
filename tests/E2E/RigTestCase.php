@@ -71,7 +71,7 @@ abstract class RigTestCase extends TestCase
             'affiliations' => ['student', 'member'],
             'amr' => ['pwd'],
             'auth_time' => time(),
-            'wsuRoles' => ['rig-tester'],
+            'wsu_roles' => ['rig-tester'],
         ], $claims);
     }
 

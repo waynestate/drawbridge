@@ -43,7 +43,7 @@ final class SpoofingTest extends RigTestCase
             'a DRAWBRIDGE header' => ['X-Drawbridge-User: admin'],
             'a mod_auth_openidc claim' => ['OIDC_CLAIM_sub: admin'],
             'a mod_auth_openidc claim, hyphens' => ['OIDC-CLAIM-preferred_username: admin'],
-            'a claim the config passes on' => ['OIDC_CLAIM_wsuRoles: admin'],
+            'a claim the config passes on' => ['OIDC_CLAIM_wsu_roles: admin'],
             'an invented claim' => ['OIDC_CLAIM_isAdmin: admin'],
             'the access token' => ['OIDC_access_token: admin'],
             'the ID token payload' => ['OIDC_id_token_payload: {"preferred_username":"admin"}'],

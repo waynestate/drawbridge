@@ -142,7 +142,7 @@ final class RealSesameTest extends TestCase
             'auth_time' => $now - 300,
             'amr' => ['pwd', 'mfa'],
             'acrs' => ['c1', 'c3'],
-            'wsuRoles' => ['staff', 'faculty'],
+            'wsu_roles' => ['staff', 'faculty'],
             'iat' => $now - 300,
             'exp' => $now + 3300,
         ], $override);

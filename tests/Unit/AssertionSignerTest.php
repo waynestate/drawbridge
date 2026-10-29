@@ -65,7 +65,7 @@ final class AssertionSignerTest extends TestCase
             'auth_time' => $this->now() - 300,
             'amr' => ['pwd', 'mfa'],
             'acrs' => ['c1', 'c3'],
-            'wsuRoles' => ['staff', 'faculty'],
+            'wsu_roles' => ['staff', 'faculty'],
             'iat' => $this->now() - 300,
             'exp' => $this->now() + 3300,
         ], $override);
@@ -113,7 +113,7 @@ final class AssertionSignerTest extends TestCase
         $this->assertSame($now - 300, $claims->get('auth_time'));
         $this->assertSame(['pwd', 'mfa'], $claims->get('amr'));
         $this->assertSame(['c1', 'c3'], $claims->get('acrs'));
-        $this->assertSame(['staff', 'faculty'], $claims->get('wsuRoles'));
+        $this->assertSame(['staff', 'faculty'], $claims->get('wsu_roles'));
         $this->assertFalse($claims->has('oid'), 'claims that are not configured are not passed on');
         $this->assertMatchesRegularExpression('/^[0-9a-f]{32}$/', $claims->get('jti'));
         $this->assertSame('drawbridge+jwt', $parsed->headers()->get('typ'));
@@ -250,9 +250,9 @@ final class AssertionSignerTest extends TestCase
 
     public function testAnExtraClaimThatIsAnObjectIsDropped(): void
     {
-        $claims = $this->parse($this->signer()->sign($this->request(override: ['wsuRoles' => ['nested' => ['x' => 1]]])))->claims();
+        $claims = $this->parse($this->signer()->sign($this->request(override: ['wsu_roles' => ['nested' => ['x' => 1]]])))->claims();
 
-        $this->assertFalse($claims->has('wsuRoles'));
+        $this->assertFalse($claims->has('wsu_roles'));
     }
 
     public function testAnAffiliationsClaimThatIsOneStringBecomesAList(): void

@@ -74,7 +74,7 @@ browser --> Apache httpd (Drawbridge) --> app container
   `aud` (the app's host), `sub` (the configured user claim, `accessid` in the example config and `preferred_username`
   if unset), `iat`, `nbf`, `exp`
   (60 seconds by default), `jti`; `auth_time`, `amr` and `acrs` when the ID token carries them; `email`, `name` and
-  `affiliations` when configured; and any `extra_claims` (for example `wsuRoles`). A new one is minted for every
+  `affiliations` when configured; and any `extra_claims` (for example `wsu_roles`). A new one is minted for every
   request, and only from an ID token whose `iss` is the configured provider.
 - If the signer cannot sign, the answer is 503. A request never reaches the app unsigned.
 - Header stripping: the guard removes every inbound `X-Authenticated-*`, `X-Sesame-*`, `X-Drawbridge-*`,
@@ -196,10 +196,11 @@ One app registration covers every app host. In the Entra admin center, under App
    once it has (see `OPEN_QUESTIONS.md`, secret rotation).
 4. **Token configuration.** Add the optional ID token claims the config reads: `accessid` (the AccessID, transformed
    from the user principal name with `ExtractMailPrefix`; this is what the example config uses for `oidc.user_claim`),
-   `email`, `auth_time`, and `acrs` if any path uses an authentication context. Add `wsuRoles` as a mapped claim (it
-   comes from an on-premises AD attribute) and set `acceptMappedClaims: true` in the app manifest, so no custom
-   signing key is needed and the metadata URL stays plain; list it in `oidc.extra_claims`. A tenant that does not
-   send `accessid` leaves `oidc.user_claim` at `preferred_username`.
+   `email`, `auth_time`, and `acrs` if any path uses an authentication context. Add `wsu_roles` as a mapped claim
+   (the source attribute is `user.wsuRoles`, an on-premises AD attribute; the emitted claim is `wsu_roles`) and set
+   `acceptMappedClaims: true` in the app manifest, so no custom signing key is needed and the metadata URL stays
+   plain; list it in `oidc.extra_claims`. A tenant that does not send `accessid` leaves `oidc.user_claim` at
+   `preferred_username`.
 5. **Overview.** Copy the Directory (tenant) ID into `oidc.issuer`
    (`https://login.microsoftonline.com/<tenant-id>/v2.0`) and the Application (client) ID into `oidc.client_id`.
    Neither is a secret, but neither belongs in this repository either. The issuer is in Playbook as
@@ -277,7 +278,7 @@ oidc:
   client_id: <application-client-id>
   client_secret_env: DRAWBRIDGE_OIDC_CLIENT_SECRET   # the NAME of the variable, never the secret
   user_claim: accessid                               # the AccessID; preferred_username for a tenant that does not send it
-  extra_claims: [wsuRoles]                           # copied into the assertion when present
+  extra_claims: [wsu_roles]                          # copied into the assertion when present
 
 apps:
   - id: app1

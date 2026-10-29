@@ -44,6 +44,7 @@ final class HeaderPolicyTest extends TestCase
             'surrounding whitespace' => [' X-Authenticated-User ', true],
             'a mod_auth_openidc claim header' => ['OIDC_CLAIM_sub', true],
             'any claim under that prefix' => ['OIDC-Claim-Made-Up', true],
+            'the roles claim, as Entra sends it' => ['OIDC_CLAIM_wsu_roles', true],
             'the access token' => ['OIDC_access_token', true],
             'the ID token payload' => ['OIDC_id_token_payload', true],
             'the refresh token' => ['oidc-refresh-token', true],
@@ -87,6 +88,7 @@ final class HeaderPolicyTest extends TestCase
             'x-forwarded-for', 'x_forwarded_for', 'forwarded', 'proxy',
             'x-authenticated-role', 'x_authenticated_role',
             'oidc_claim_sub', 'oidc-claim-sub', 'oidc_claim_preferred_username', 'oidc_claim_email', 'oidc_claim_wsuroles',
+            'oidc_claim_wsu_roles', 'oidc-claim-wsu-roles',
             'oidc_claim_acrs', 'oidc_claim_amr', 'oidc_claim_affiliations',
             'oidc_access_token', 'oidc-access-token', 'oidc_id_token_payload', 'oidc_refresh_token', 'oidc_userinfo_json',
         ] as $expected) {

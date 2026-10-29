@@ -26,7 +26,7 @@ final class Fixtures
                 'client_id' => '11111111-2222-3333-4444-555555555555',
                 'client_secret_env' => 'DRAWBRIDGE_OIDC_CLIENT_SECRET',
                 'attribute_claims' => ['affiliations' => 'affiliations'],
-                'extra_claims' => ['wsuRoles'],
+                'extra_claims' => ['wsu_roles'],
             ],
             'apps' => [
                 [

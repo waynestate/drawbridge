@@ -51,8 +51,9 @@ oidc:
     email: email
     name: name
   # ID token claims copied into the assertion under the same name when present (strings, numbers or lists of them).
-  # wsuRoles comes from on-premises AD through a mapped claim (acceptMappedClaims), so no custom signing key is needed.
-  extra_claims: [wsuRoles]
+  # wsu_roles is the claim name Entra sends; it is mapped from the directory attribute user.wsuRoles via
+  # acceptMappedClaims, so no custom signing key is needed.
+  extra_claims: [wsu_roles]
 
   # Entra "amr" values -> the "amr" values SESAME's MFA check reads. The default covers pwd, mfa, ngcmfa (as mfa),
   # otp, rsa, wia and the REFEDS MFA URI. An unknown value gives no amr, never a guessed "mfa".
