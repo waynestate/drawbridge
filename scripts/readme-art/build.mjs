@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /* ============================================================================
-   DRAWBRIDGE README art kit.
+   Drawbridge README art kit.
 
    Renders the README images from this repo's own front page (site/), its
    source and its example config, and writes them under docs/readme/.

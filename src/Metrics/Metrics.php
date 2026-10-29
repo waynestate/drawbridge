@@ -13,10 +13,10 @@ use Prometheus\Storage\Adapter;
 use Prometheus\Storage\InMemory;
 
 /**
- * Builds the DRAWBRIDGE /metrics payload.
+ * Builds the Drawbridge /metrics payload.
  *
  * Framework-free: this class knows nothing about Apache, mod_auth_openidc, or
- * any web framework. It builds a CollectorRegistry, registers the DRAWBRIDGE
+ * any web framework. It builds a CollectorRegistry, registers the Drawbridge
  * build-info gauge and (optionally) the assertion-signing counters, and
  * renders the result in the Prometheus text exposition format.
  *
@@ -38,7 +38,7 @@ use Prometheus\Storage\InMemory;
 final class Metrics
 {
     /**
-     * The Prometheus namespace for every DRAWBRIDGE metric.
+     * The Prometheus namespace for every Drawbridge metric.
      */
     private const NAMESPACE = 'drawbridge';
 
@@ -63,7 +63,7 @@ final class Metrics
 
     /**
      * @param Adapter|null $storage  The storage adapter. Defaults to InMemory.
-     * @param string|null $version  The DRAWBRIDGE version for the build-info
+     * @param string|null $version  The Drawbridge version for the build-info
      *        metric. Defaults to the installed package version.
      * @param bool $counters  Whether to register the assertion-signing
      *        counters. The signer passes true (its in-process counters); the
@@ -148,7 +148,7 @@ final class Metrics
     }
 
     /**
-     * drawbridge_build_info: a gauge of 1, labelled with the DRAWBRIDGE
+     * drawbridge_build_info: a gauge of 1, labelled with the Drawbridge
      * version. Its presence is what a scraper or operator wants to see.
      */
     private function registerBuildInfo(string $version): void

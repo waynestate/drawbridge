@@ -1,4 +1,4 @@
-/* DRAWBRIDGE front page. Small, vanilla, no build.
+/* Drawbridge front page. Small, vanilla, no build.
 
    1. ink: measure each drawn line so CSS can draw it in
    2. the gate: the bridge, the chain, the visitor and the forgeries

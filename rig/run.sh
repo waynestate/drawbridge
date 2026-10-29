@@ -1,5 +1,5 @@
 #!/bin/sh
-# Run the DRAWBRIDGE container rig on Linux or macOS: build the gateway image, start the mock OpenID Connect provider and echo app,
+# Run the Drawbridge container rig on Linux or macOS: build the gateway image, start the mock OpenID Connect provider and echo app,
 # run the end-to-end tests, tear everything down. Nothing here talks to Entra. (Windows: rig/run.ps1.)
 #
 # Drawbridge goes up, the tests go in, the drawbridge goes back down. Raise it again and nobody has to knock.

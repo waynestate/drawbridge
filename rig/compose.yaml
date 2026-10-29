@@ -1,4 +1,4 @@
-# The DRAWBRIDGE test rig: the real gateway image, a throwaway OpenID Connect provider and a tiny echo app, on one
+# The Drawbridge test rig: the real gateway image, a throwaway OpenID Connect provider and a tiny echo app, on one
 # private network. Run it with rig/run.sh (Linux, macOS) or rig/run.ps1 (Windows). Nothing in here reaches Entra or
 # the internet: the provider is mock-oauth2-server, which signs in anyone with whatever claims the test types in.
 

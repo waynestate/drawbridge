@@ -1,7 +1,7 @@
 # composer ci is the contract: the checks are defined there, and this pipeline only wraps them.
-# DRAWBRIDGE pipeline, built from the PREFLIGHT components on this GitLab.
-# Pinned to PREFLIGHT 0.1.0. Never use ~latest.
-# DRAWBRIDGE requires PHP ^8.3, so the test matrix starts at 8.3.
+# Drawbridge pipeline, built from the Preflight components on this GitLab.
+# Pinned to Preflight 0.1.0. Never use ~latest.
+# Drawbridge requires PHP ^8.3, so the test matrix starts at 8.3.
 include:
   - component: $CI_SERVER_FQDN/enterprise-apps/preflight/php-test@0.1.0
     inputs:
@@ -22,7 +22,7 @@ composer-ci:
     - composer ci
 
 # The gateway image is built with Buildah in an unprivileged container: the stack's rules ban privileged jobs,
-# Docker-in-Docker services, Docker socket mounts and kaniko (PREFLIGHT's template lint, see the PREFLIGHT README).
+# Docker-in-Docker services, Docker socket mounts and kaniko (Preflight's template lint, see the Preflight README).
 # vfs is the storage driver Buildah documents for non-root users (buildah(1), --storage-driver) and chroot is the
 # isolation that needs no OCI runtime (buildah-build(1), --isolation, in the containers/buildah repository).
 # The Buildah image is pinned to a tag and its digest (quay.io, looked up 2026-10-28); bump it through review.

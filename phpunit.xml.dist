@@ -6,7 +6,7 @@
          failOnWarning="true"
          failOnRisky="true">
     <testsuites>
-        <!-- Plain `phpunit` (and the PREFLIGHT php-test job) run these: no Docker, no network.
+        <!-- Plain `phpunit` (and the Preflight php-test job) run these: no Docker, no network.
              The integration suite is skipped unless SESAME_PATH points at an installed SESAME
              checkout (tests/Integration/RealSesameTest.php). The container rig has its own
              config, phpunit.e2e.xml.dist. -->

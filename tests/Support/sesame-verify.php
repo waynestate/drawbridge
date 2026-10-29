@@ -3,11 +3,11 @@
 declare(strict_types=1);
 
 /**
- * Runs one DRAWBRIDGE assertion through SESAME's real GatewayDriver.
+ * Runs one Drawbridge assertion through SESAME's real GatewayDriver.
  *
- * A child process on purpose: SESAME's Composer autoloader and DRAWBRIDGE's
+ * A child process on purpose: SESAME's Composer autoloader and Drawbridge's
  * must not share a process (two autoloaders, two copies of lcobucci/jwt).
- * RealSesameTest signs the token with DRAWBRIDGE's real signer, pipes a JSON
+ * RealSesameTest signs the token with Drawbridge's real signer, pipes a JSON
  * request description in on stdin, and reads one JSON line out:
  *
  *   {"ok":true,"user":"jdoe@example.test"}

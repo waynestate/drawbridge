@@ -1,4 +1,4 @@
-# Run the DRAWBRIDGE container rig on Windows: build the gateway image, start the mock OpenID Connect provider and echo app,
+# Run the Drawbridge container rig on Windows: build the gateway image, start the mock OpenID Connect provider and echo app,
 # run the end-to-end tests, tear everything down. Nothing here talks to Entra. (Linux/macOS: rig/run.sh.)
 #
 # Drawbridge goes up, the tests go in, the drawbridge goes back down.

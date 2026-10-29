@@ -1,5 +1,5 @@
 # PHPStan settings come from Pinstripe (the stack's coding standard), raw PHP cut.
-# This file adds only DRAWBRIDGE's own paths and PHP version range.
+# This file adds only Drawbridge's own paths and PHP version range.
 includes:
     - vendor/waynestate/pinstripe/phpstan/raw.neon
 

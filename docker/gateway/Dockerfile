@@ -1,4 +1,4 @@
-# DRAWBRIDGE gateway image: Apache httpd + mod_auth_openidc (the OpenID Connect relying party) + mod_proxy + mod_lua,
+# Drawbridge gateway image: Apache httpd + mod_auth_openidc (the OpenID Connect relying party) + mod_proxy + mod_lua,
 # plus the small PHP component that signs the assertion. Build from the repository root:
 #   docker build -f docker/gateway/Dockerfile -t drawbridge .
 # The optional --build-arg DRAWBRIDGE_SOURCE_URL / DRAWBRIDGE_REVISION / DRAWBRIDGE_VERSION fill the OCI labels;

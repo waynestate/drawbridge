@@ -10,7 +10,7 @@ use Waynestate\Drawbridge\Metrics\MetricsEndpoint;
 use Waynestate\Drawbridge\Metrics\MetricsGate;
 
 /**
- * The DRAWBRIDGE /metrics endpoint.
+ * The Drawbridge /metrics endpoint.
  *
  * A thin, framework-free web script: point a web server (Apache mod_php, CGI,
  * or FPM) at it for the /metrics path. It reads the request's bearer token and

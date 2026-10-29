@@ -17,7 +17,7 @@ use Waynestate\Drawbridge\Config\Config;
 /**
  * Signs the short-lived assertion that SESAME's GatewayDriver verifies.
  *
- * Claims: iss (DRAWBRIDGE, not the provider), aud (the one app's audience),
+ * Claims: iss (Drawbridge, not the provider), aud (the one app's audience),
  * sub (the configured user claim), iat, nbf, exp, a unique jti, auth_time,
  * amr and acrs when the ID token says so, the optional email, name and
  * affiliations that SESAME turns into attributes, and any configured extra

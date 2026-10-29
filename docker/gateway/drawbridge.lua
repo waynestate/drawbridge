@@ -1,4 +1,4 @@
--- DRAWBRIDGE's request guard, inside Apache (mod_lua).
+-- Drawbridge's request guard, inside Apache (mod_lua).
 --
 -- The rules are not written here. They are data in policy.lua, generated from the PHP HeaderPolicy and the
 -- app config by `drawbridge render`, so there is one source and it is unit-tested. This file is the loop.

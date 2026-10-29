@@ -123,7 +123,7 @@ final class RealSesameTest extends TestCase
     }
 
     /**
-     * Sign an assertion for the given host with DRAWBRIDGE's real signer.
+     * Sign an assertion for the given host with Drawbridge's real signer.
      *
      * @param  array<string, mixed>  $override
      */

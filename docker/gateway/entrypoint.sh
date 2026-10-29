@@ -1,5 +1,5 @@
 #!/bin/sh
-# Start DRAWBRIDGE: check the files it cannot run without, render the config, then run Apache.
+# Start Drawbridge: check the files it cannot run without, render the config, then run Apache.
 # Any problem stops the container. A gateway that is half configured must not come up, because "up" means
 # "the way into every app", and an open way in is worse than a closed one.
 set -eu
