@@ -1,8 +1,8 @@
 <div align="center">
-  <a href="site/index.html"><img src="docs/readme/hero.jpg" width="100%" alt="DRAWBRIDGE's front page: the headline DRAWBRIDGE in stencil capitals, 'Comes down for signed-in people.', and an architect's section A-A through a gatehouse with the DRAWBRIDGE mark in a detail callout."></a>
+  <a href="site/index.html"><img src="docs/readme/hero.jpg" width="100%" alt="Drawbridge's front page: the headline Drawbridge in stencil capitals, 'Comes down for signed-in people.', and an architect's section A-A through a gatehouse with the Drawbridge mark in a detail callout."></a>
 </div>
 
-# DRAWBRIDGE
+# Drawbridge
 
 <div align="center">
   <img src="docs/readme/badges/php.svg" alt="php ^8.3">
@@ -17,7 +17,7 @@ Checks: `composer ci` (the same command runs on GitLab and GitHub). The containe
 
 > The one way into the Citadel. It only comes down for people who signed in.
 
-DRAWBRIDGE is the Citadel auth gateway at `auth.apps.wayne.edu`: one OpenID Connect client, signed in through
+Drawbridge is the Citadel auth gateway at `auth.apps.wayne.edu`: one OpenID Connect client, signed in through
 Microsoft Entra ID, for every app on the platform. It sits in front of the apps as a reverse proxy, makes sure the
 visitor has a session, throws away any identity header the visitor tried to bring along, and passes the app either a
 short-lived signed assertion that SESAME's `gateway` driver verifies, or plain `X-Authenticated-*` headers for apps
@@ -25,7 +25,7 @@ that cannot verify a token yet. Which paths need a login, and which need an Entr
 declared per app in a config file. Nothing else decides it.
 
 Why a moat and not a lock on each door: every app doing its own OpenID Connect is another chance to get a nonce,
-a state check or a token signature wrong. DRAWBRIDGE does the sign-in once, in a maintained module
+a state check or a token signature wrong. Drawbridge does the sign-in once, in a maintained module
 (mod_auth_openidc), and every app only has to check one small signed token.
 
 This repository is published from Wayne State University's internal GitLab and mirrored here. Changes land there
@@ -41,17 +41,17 @@ decisions written down.
 | WayneUI | the interface layer (project 0 of the stack) |
 | CREED | the shared rules and policy format |
 | PROCTOR | checks an app against the version policy |
-| PREFLIGHT | the shared CI components |
-| SESAME | sign-in inside the app; its `gateway` driver verifies what DRAWBRIDGE signs |
+| Preflight | the shared CI components |
+| SESAME | sign-in inside the app; its `gateway` driver verifies what Drawbridge signs |
 | HELMET | security headers and CSP reporting |
 | Pinstripe | the coding standard presets (Pint, PHPStan, ESLint, Rector) |
 | Sourdough | the starter that keeps the stack fed |
-| **DRAWBRIDGE** | **the one OpenID Connect front door for the Citadel** |
+| **Drawbridge** | **the one OpenID Connect front door for the Citadel** |
 
 ## How it works
 
 ```
-browser --> Apache httpd (DRAWBRIDGE) --> app container
+browser --> Apache httpd (Drawbridge) --> app container
               |  mod_auth_openidc : OpenID Connect client (Entra ID), one session cookie per app host
               |  mod_lua          : strips identity headers on every request, before anything else
               |  mod_rewrite      : asks the PHP signer for an assertion (prg: map)
@@ -70,7 +70,7 @@ browser --> Apache httpd (DRAWBRIDGE) --> app container
   through with no identity at all.
 - mod_auth_openidc checks the ID token (signature, issuer, audience, nonce, expiry) and keeps the session. The
   claims reach the gateway in the request environment only, never as headers, and no Entra token is passed to an app.
-- The assertion is a compact JWT with `typ: drawbridge+jwt` and a `kid`. Claims: `iss` (DRAWBRIDGE, never Entra),
+- The assertion is a compact JWT with `typ: drawbridge+jwt` and a `kid`. Claims: `iss` (Drawbridge, never Entra),
   `aud` (the app's host), `sub` (the configured user claim, `accessid` in the example config and `preferred_username`
   if unset), `iat`, `nbf`, `exp`
   (60 seconds by default), `jti`; `auth_time`, `amr` and `acrs` when the ID token carries them; `email`, `name` and
@@ -98,7 +98,7 @@ On that path the gateway asks Entra for the context with the OpenID Connect `cla
 (`{"id_token":{"acrs":{"essential":true,"value":"c1"}}}`) and lets the request through only when the ID token's
 `acrs` array lists `c1`. A visitor already signed in without it is sent back to Entra to step up (mod_auth_openidc
 answers with a short page that forwards the browser); an `api` path answers 401. What `c1` actually demands (MFA,
-a compliant device, a fresh sign-in) is a Conditional Access policy in Entra, not DRAWBRIDGE config. The check is
+a compliant device, a fresh sign-in) is a Conditional Access policy in Entra, not Drawbridge config. The check is
 made twice: by mod_auth_openidc's `Require claim acrs:c1`, and again by the gateway's own stamp step.
 
 ### Signing out
@@ -182,7 +182,7 @@ The secrets are never written into the rendered Apache config: it says `OIDCClie
 and Apache reads the value from its environment. Keys and secrets are never in git. `OPEN_QUESTIONS.md` lists where
 each real one comes from.
 
-### Register DRAWBRIDGE in Entra ID
+### Register Drawbridge in Entra ID
 
 One app registration covers every app host. In the Entra admin center, under App registrations:
 
@@ -336,12 +336,12 @@ sh rig/run.sh        # Linux, macOS
 
 ## Using the assertion in an app
 
-Point SESAME's `gateway` driver at DRAWBRIDGE: the same issuer, the app's host as the audience, the signing public
+Point SESAME's `gateway` driver at Drawbridge: the same issuer, the app's host as the audience, the signing public
 key, and the header `X-Sesame-Assertion`. Apps do not parse the token themselves.
 
 ## Metrics
 
-DRAWBRIDGE can expose a Prometheus `/metrics` endpoint, off by default. It is on when `DRAWBRIDGE_METRICS_TOKEN`
+Drawbridge can expose a Prometheus `/metrics` endpoint, off by default. It is on when `DRAWBRIDGE_METRICS_TOKEN`
 (a bearer token) or `DRAWBRIDGE_METRICS_ALLOW` (a comma list of client IPs/CIDRs) is set, and a request is served
 when it presents the token or comes from an allowed address. A disabled or misconfigured endpoint answers 404 and an
 unauthorized request answers 403, so the route is never advertised and never served to a stranger. The client
@@ -385,7 +385,7 @@ store, PHP's share-nothing model cannot see across processes.
 - `CHANGELOG.md`: what changed.
 - `site/`: the front page, a static sheet set for the gatehouse (`site/index.html`; see `site/README.md`).
 
-On Citadel it is served by the raw-PHP deploy layer in [`deploy/`](deploy/): a SQUIRE kit whose front controller serves `site/` behind HELMET's security headers. For local development, keep serving `site/` directly.
+On Citadel it is served by the raw-PHP deploy layer in [`deploy/`](deploy/): a Squire kit whose front controller serves `site/` behind HELMET's security headers. For local development, keep serving `site/` directly.
 
 <details>
 <summary><b>Sheets</b>: three windows onto the gatehouse</summary>
@@ -396,7 +396,7 @@ On Citadel it is served by the raw-PHP deploy layer in [`deploy/`](deploy/): a S
 <details>
 <summary><b>The brand board</b>: the mark, lockups, palette and type</summary>
 <br>
-<div align="center"><img src="docs/readme/board.jpg" width="100%" alt="DRAWBRIDGE's brand board: the gatehouse mark on a Wayne State green tile, its lockups, the palette of green, gold and cream, the type, favicons and clear space."></div>
+<div align="center"><img src="docs/readme/board.jpg" width="100%" alt="Drawbridge's brand board: the gatehouse mark on a Wayne State green tile, its lockups, the palette of green, gold and cream, the type, favicons and clear space."></div>
 </details>
 
 ## The name
@@ -408,7 +408,7 @@ raise the issue. The moat is only as good as the people who keep reporting where
 
 MIT. Copyright Wayne State University.
 
-<div align="center"><b>Same castle, every sheet</b><br><sub>WayneUI and the stack. DRAWBRIDGE minds the gate.</sub></div>
+<div align="center"><b>Same castle, every sheet</b><br><sub>WayneUI and the stack. Drawbridge minds the gate.</sub></div>
 
 <div align="center">
   <a href="https://github.com/waynestate/wayne-ui" title="WayneUI"><img src="docs/readme/cast/wayneui.png" width="40" alt="WayneUI"></a>
@@ -417,12 +417,12 @@ MIT. Copyright Wayne State University.
   <a href="https://github.com/waynestate/sesame" title="SESAME"><img src="docs/readme/cast/sesame.png" width="40" alt="SESAME"></a>
   <a href="https://github.com/waynestate/helmet" title="HELMET"><img src="docs/readme/cast/helmet.png" width="40" alt="HELMET"></a>
   <a href="https://github.com/waynestate/sourdough" title="Sourdough"><img src="docs/readme/cast/sourdough.png" width="40" alt="Sourdough"></a>
-  <a href="https://github.com/waynestate/squire" title="SQUIRE"><img src="docs/readme/cast/squire.png" width="40" alt="SQUIRE"></a>
-  <a href="https://github.com/waynestate/preflight" title="PREFLIGHT"><img src="docs/readme/cast/preflight.png" width="40" alt="PREFLIGHT"></a>
+  <a href="https://github.com/waynestate/squire" title="Squire"><img src="docs/readme/cast/squire.png" width="40" alt="Squire"></a>
+  <a href="https://github.com/waynestate/preflight" title="Preflight"><img src="docs/readme/cast/preflight.png" width="40" alt="Preflight"></a>
   <a href="https://github.com/waynestate/pinstripe" title="Pinstripe"><img src="docs/readme/cast/pinstripe.png" width="40" alt="Pinstripe"></a>
-  <a href="https://github.com/waynestate/booster" title="BOOSTER"><img src="docs/readme/cast/booster.png" width="40" alt="BOOSTER"></a>
-  <a href="https://github.com/waynestate/rollcall" title="ROLLCALL"><img src="docs/readme/cast/rollcall.png" width="40" alt="ROLLCALL"></a>
-  <a href="https://github.com/waynestate/drawbridge" title="DRAWBRIDGE"><img src="docs/readme/cast/drawbridge.png" width="40" alt="DRAWBRIDGE"></a>
+  <a href="https://github.com/waynestate/booster" title="Booster"><img src="docs/readme/cast/booster.png" width="40" alt="Booster"></a>
+  <a href="https://github.com/waynestate/rollcall" title="Rollcall"><img src="docs/readme/cast/rollcall.png" width="40" alt="Rollcall"></a>
+  <a href="https://github.com/waynestate/drawbridge" title="Drawbridge"><img src="docs/readme/cast/drawbridge.png" width="40" alt="Drawbridge"></a>
   <a href="https://github.com/waynestate/advisor" title="ADVISOR"><img src="docs/readme/cast/advisor.png" width="40" alt="ADVISOR"></a>
   <a href="https://github.com/waynestate/weld" title="WELD"><img src="docs/readme/cast/weld.png" width="40" alt="WELD"></a>
 </div>

@@ -1,4 +1,4 @@
-# DRAWBRIDGE front page
+# Drawbridge front page
 
 A static page: `index.html`, `assets/drawbridge.css`, `assets/drawbridge.js`. No build step. Serve the `site/` folder
 from anywhere (Citadel, any web server, or `python -m http.server` inside `site/` for a look; fonts are blocked over
@@ -19,7 +19,7 @@ from anywhere (Citadel, any web server, or `python -m http.server` inside `site/
   out** and **Forge a header** replay it; with the bridge down, a forgery walks in and is stripped by the guard.
 - door schedule: the path box runs the same matching as `src/Http/PathNormalizer.php` and `PathRule.php` in the
   browser, for the example config, and prints the real `drawbridge explain` wording (checked against the command).
-- marks: `brand/` is DRAWBRIDGE's (generated with ChatGPT, never redrawn). `assets/marks/` holds the other stack
+- marks: `brand/` is Drawbridge's (generated with ChatGPT, never redrawn). `assets/marks/` holds the other stack
   parts' marks, copied from the sibling sites; WayneUI uses its own reversed mark on green.
 - reduced motion: the page is the finished drawing, every word present at first paint: bridge down, visitor inside
   with a fresh assertion. The buttons still work, instantly, and the status line says what happened.

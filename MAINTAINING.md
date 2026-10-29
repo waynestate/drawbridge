@@ -1,11 +1,11 @@
 # MAINTAINING: oiling the chains
 
-How to build, test, release and run DRAWBRIDGE. DRAWBRIDGE is the Citadel auth gateway: one OpenID Connect client to
+How to build, test, release and run Drawbridge. Drawbridge is the Citadel auth gateway: one OpenID Connect client to
 Microsoft Entra ID (through Apache mod_auth_openidc) in front of apps, which signs a short assertion for SESAME's
 `gateway` driver. A drawbridge that sticks keeps everyone out, so the maintenance below is mostly about keys,
 secrets and their expiry dates.
 
-## What DRAWBRIDGE is and what it depends on
+## What Drawbridge is and what it depends on
 
 - A container image (`docker/gateway/Dockerfile`) plus a PHP signer and CLI (`bin/drawbridge`). It is not installed
   with Composer by apps and is not on Packagist.
@@ -39,10 +39,10 @@ for the rig only.
 
 ## CI
 
-- **GitLab:** PREFLIGHT's `php-test` (PHP 8.3, 8.4, 8.5) and `composer-audit` components, a `composer-ci` job,
+- **GitLab:** Preflight's `php-test` (PHP 8.3, 8.4, 8.5) and `composer-audit` components, a `composer-ci` job,
   `gateway-image:build` (Buildah, on merge requests and `main`), `gateway-image:publish` (on tags only) and a manual
   `rig` job.
-- **GitHub:** `.github/workflows/ci.yml` calls PREFLIGHT's reusable workflow with `composer ci`, plus the `rig` job.
+- **GitHub:** `.github/workflows/ci.yml` calls Preflight's reusable workflow with `composer ci`, plus the `rig` job.
 - Green means `composer ci` passes on all three PHP versions on both, and the rig passes on GitHub.
 
 ## What an operator supplies
@@ -86,7 +86,7 @@ Settings are described in "Configuration" and "Environment variables" in the REA
 ## The front page
 
 `site/` is the static front page, for `https://drawbridge.apps.wayne.edu/` on Citadel, served through a small raw-PHP
-`deploy/` layer generated with SQUIRE. The gateway itself is a separate deploy.
+`deploy/` layer generated with Squire. The gateway itself is a separate deploy.
 
 ## Who maintains it
 

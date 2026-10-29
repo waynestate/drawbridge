@@ -1,4 +1,4 @@
-# DRAWBRIDGE README art kit
+# Drawbridge README art kit
 
 Regenerates the README images under `docs/readme/` from this repo's own front
 page (`site/`), its source and its example config. Nothing is drawn by hand:

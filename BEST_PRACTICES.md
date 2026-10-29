@@ -1,6 +1,6 @@
 # Best practices
 
-The rules DRAWBRIDGE holds itself to. Each one has a test.
+The rules Drawbridge holds itself to. Each one has a test.
 
 1. **Strip first.** Remove every inbound identity header, in every spelling, on every request, before authentication
    runs, including anything that looks like mod_auth_openidc's own `OIDC_*` output. Test: `tests/E2E/SpoofingTest.php`.
@@ -14,7 +14,7 @@ The rules DRAWBRIDGE holds itself to. Each one has a test.
    from the literal, never typed by hand.
 6. **Sign narrowly and briefly.** ES256, a pinned `typ`, one audience per app, 60 seconds by default, a fresh `jti` on
    every request. The key never leaves the signer.
-7. **Let the module do OpenID Connect.** DRAWBRIDGE writes no OAuth client: mod_auth_openidc runs the code flow with
+7. **Let the module do OpenID Connect.** Drawbridge writes no OAuth client: mod_auth_openidc runs the code flow with
    PKCE, checks state, nonce, issuer, audience and the token signature, and keeps the session. The gateway only reads
    the validated claims, refuses an ID token from any other issuer, and asks for an authentication context with the
    module's own per-path parameters. Forged callbacks and missing contexts are refused. Test: `OidcTest`,
