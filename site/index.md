@@ -16,6 +16,8 @@ Comes down for signed-in people.
 
 One OpenID Connect client at **auth.apps.wayne.edu**, signed in through Microsoft Entra ID, in front of every app on the platform. It makes sure the visitor has a session, throws away any identity header they tried to bring along, and hands the app a 60-second ES256-signed assertion that SESAME verifies.
 
+**Works alongside [WELD](https://weld.apps.wayne.edu/).** You don't install it: Drawbridge is the Citadel's front door, and WELD signs in through it with [SESAME](https://sesame.apps.wayne.edu/)'s gateway driver.
+
 [Build the gatehouse](https://drawbridge.apps.wayne.edu/#build-title) [Read the section](https://drawbridge.apps.wayne.edu/#section-title)
 
 ![Drawbridge mark: a cream gatehouse tower on a green tile, its bridge lowered on a gold chain](https://drawbridge.apps.wayne.edu/brand/drawbridge-avatar-256.png)
