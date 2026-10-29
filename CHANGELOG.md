@@ -28,8 +28,13 @@ same signed assertion for SESAME; only the rope to the identity provider is new.
 - Config: the example and rig set `oidc.user_claim: accessid`, the AccessID the Entra app registration sends
   (transformed from the user principal name with `ExtractMailPrefix`); `preferred_username` still works for a tenant
   that does not send `accessid`. The example also lists `wsuRoles` in `extra_claims`, a mapped claim that needs no
-  custom signing key. The gatehouse takes names as the AccessID now, because even a drawbridge only lifts for barges
-  it knows.
+   custom signing key. The gatehouse takes names as the AccessID now, because even a drawbridge only lifts for barges
+   it knows.
+- Coding standard: the hand-copied PHPStan settings are replaced by an include of Pinstripe's raw PHP cut
+  (`waynestate/pinstripe` is now a dev dependency, and `phpstan.neon` keeps only this repository's paths and PHP
+  version range). Two findings from the preset's added deprecation and @var checks are fixed: the signer builds JWTs
+  with `Builder::new()` instead of the deprecated lcobucci/jwt constructor, and the metrics allow-list keeps its
+  runtime entry validation in a dedicated helper.
 
 ### Added
 

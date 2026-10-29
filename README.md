@@ -272,6 +272,10 @@ Run as `php bin/drawbridge <command>` (or `vendor/bin/drawbridge` when installed
 composer ci          # manifest, unit tests, Pint, PHPStan level 8, composer audit
 ```
 
+The PHPStan and Pint settings come from Pinstripe, the stack's coding standard: `phpstan.neon` includes the raw
+PHP cut, and `pint.json` uses the same `per` preset as Pinstripe's `pint/per.json`. This repository adds only its
+own paths, PHP version range and excludes.
+
 In Docker, with no local PHP:
 
 ```powershell
