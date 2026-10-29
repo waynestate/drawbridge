@@ -357,6 +357,8 @@ store, PHP's share-nothing model cannot see across processes.
 - `CHANGELOG.md`: what changed.
 - `site/`: the front page, a static sheet set for the gatehouse (`site/index.html`; see `site/README.md`).
 
+On Citadel it is served by the raw-PHP deploy layer in [`deploy/`](deploy/): a SQUIRE kit whose front controller serves `site/` behind HELMET's security headers. For local development, keep serving `site/` directly.
+
 <details>
 <summary><b>Sheets</b>: three windows onto the gatehouse</summary>
 <br>
