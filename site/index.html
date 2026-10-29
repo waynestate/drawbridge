@@ -11,6 +11,11 @@
 <meta name="description" content="Drawbridge is the auth gateway for WSU's container platform at auth.apps.wayne.edu: one OpenID Connect client, signed in through Microsoft Entra ID, in front of every app. It makes sure the visitor signed in, strips every identity header they brought along, and hands the app a short-lived ES256-signed assertion.">
 <meta name="theme-color" content="#f4f1ea">
 <meta name="color-scheme" content="light">
+<link rel="canonical" href="https://drawbridge.apps.wayne.edu/">
+<!-- For agents (ADR-0019): this sheet as Markdown. bin/agent-ready.php writes it from
+     this page, and the front controller sends it to a client that asks for text/markdown.
+     The same drawings, minus the hatching. -->
+<link rel="alternate" type="text/markdown" href="index.md">
 <link rel="icon" href="brand/favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="brand/favicon-32.png">
 <link rel="apple-touch-icon" href="brand/drawbridge-avatar-256.png">
@@ -22,6 +27,7 @@
   look is drawbridge.css, unlayered, so it wins without !important.
 -->
 <link rel="stylesheet" href="assets/wayne-ui/wayne-ui.css">
+<link rel="stylesheet" href="assets/agent-ready.css">
 <link rel="stylesheet" href="assets/drawbridge.css">
 <script>
   /* The bridge only swings for people who are happy with motion. Everyone
@@ -45,6 +51,7 @@
       <a href="#schedule-title"><span class="sheet-index__no">A-301</span> Doors</a>
       <a href="#detail-title"><span class="sheet-index__no">A-401</span> Assertion</a>
       <a href="#build-title"><span class="sheet-index__no">A-601</span> Build</a>
+      <a href="#specs-title"><span class="sheet-index__no">A-602</span> Agents</a>
     </nav>
     <span class="brand__rev" title="Version">Rev 0.2</span>
   </div>
@@ -76,6 +83,15 @@
           <a class="wsu-btn wsu-btn--primary wsu-btn--lg" href="#build-title">Build the gatehouse</a>
           <a class="hero__link" href="#section-title">Read the section</a>
         </p>
+        <!-- The title block's issue note: who else gets a copy of this set. -->
+        <nav class="ar-page issue-note" aria-labelledby="issue-note-label" data-ar-page>
+          <p class="ar-page__label" id="issue-note-label">For your agent</p>
+          <ul class="ar-page__list">
+            <li><a class="ar-page__link" href="#specs">Get started with an agent</a></li>
+            <li><a class="ar-page__link" href="index.md" type="text/markdown">This page as Markdown</a></li>
+            <li><a class="ar-page__link" href="llms.txt">llms.txt</a></li>
+          </ul>
+        </nav>
       </div>
 
       <figure class="drawing is-down" data-gate>
@@ -507,6 +523,126 @@
     </div>
   </section>
 
+  <!-- ============================================= A-602 specifications -->
+  <!-- The prompts. A drawing set goes out with a specification: what the contractor builds,
+       to what standard, and when to send a question back before pouring anything. Your coding
+       agent is the contractor. Each spec gives it its role, the task, the gate's constraints, the
+       output wanted, and a standing order to ask before it guesses. The text is plain HTML, so an
+       agent reading this page (or index.md) gets it without the script; agent-ready.js only adds
+       the buttons. Keep every command in step with the README: bin/agent-ready.php --check fails
+       a prompt that runs a command the docs do not. -->
+  <section class="sheet sheet--specs" id="specs" aria-labelledby="specs-title">
+    <div class="wsu-container">
+      <header class="sheet__head" data-reveal>
+        <p class="sheet-tag"><span class="sheet-tag__no">A-602</span> Specifications</p>
+        <h2 id="specs-title">Specs for your agent</h2>
+        <p>Your coding agent is the contractor. Hand it a spec: copy one, or run it straight in OpenCode, Claude Code, Codex or ChatGPT. Each one says what to build, what it may not touch, and to send a question back before it guesses.</p>
+      </header>
+
+      <div class="specs">
+        <section class="ar-prompt ar-prompt--lead spec" id="prompt-get-started" aria-labelledby="prompt-get-started-title" data-ar-prompt>
+          <header class="ar-prompt__head">
+            <span class="ar-prompt__glyph" aria-hidden="true">01</span>
+            <div>
+              <p class="ar-prompt__kicker">Spec 01 · The gatehouse, on your machine</p>
+              <h3 class="ar-prompt__title" id="prompt-get-started-title">Get started with Drawbridge</h3>
+              <p class="ar-prompt__desc">Clone, validate the example config, ask explain about three doors, and run the rig against a mock provider. Nothing reaches Entra.</p>
+            </div>
+          </header>
+          <pre class="ar-prompt__text"><code>You are a coding agent helping a Wayne State University developer stand up Drawbridge on their own machine. Drawbridge is the Citadel auth gateway of WELD, the Wayne State application stack: Apache with mod_auth_openidc in front of every app, one OpenID Connect client for Microsoft Entra ID, a guard that strips every identity header a visitor brings, and a 60-second ES256 assertion that SESAME's gateway driver verifies.
+
+Read first:
+- https://drawbridge.apps.wayne.edu/llms.txt, the index of Drawbridge's pages, each one as Markdown. Work from them, not from memory.
+- ADVISOR, the stack's MCP server, if it is connected: read_project_docs with project drawbridge, and list_stack_rules with chapter auth. If it is not connected, say so and work from the pages. How to add it: https://advisor.apps.wayne.edu/llms.txt
+- The README's Install and quick start, Configuration and Commands sections, and config/drawbridge.example.yaml.
+
+Task:
+1. If this folder is not a checkout, clone it with `git clone https://github.com/waynestate/drawbridge.git`. Install with `composer install`, or in the composer:2.10.3 container the README uses if there is no PHP 8.3 here.
+2. Copy the example config and the example environment file to their working names, as the README does, then run `php bin/drawbridge config:validate --config=config/drawbridge.yaml`.
+3. Run the explain command on three paths of app1 (one public, one protected, one api) and tell me which rule wins each time, and why.
+4. Run the container rig: rig\run.ps1 on Windows, sh rig/run.sh on Linux and macOS. It signs in against a mock OpenID Connect provider and never reaches Entra.
+
+Constraints:
+- Never put a real tenant id, client id, client secret, crypto passphrase or signing key in a file git tracks. Keys and secrets are never in git.
+- Leave the guard and the path rules alone: exact or prefix only, no wildcards, no regular expressions.
+- Give separate commands for Windows (PowerShell), macOS and Linux wherever they differ.
+- Ask me before you guess, and before anything talks to a real Entra tenant.
+
+Output: the commands you ran, the three explain answers, the rig result, then your questions.</code></pre>
+        </section>
+
+        <h3 class="specs__title">Or the spec for the app behind the gate</h3>
+        <div class="specs__paths">
+        <section class="ar-prompt spec" id="prompt-laravel" aria-labelledby="prompt-laravel-title" data-ar-prompt>
+          <header class="ar-prompt__head">
+            <span class="ar-prompt__glyph" aria-hidden="true">02</span>
+            <div>
+              <p class="ar-prompt__kicker">Spec 02 · Laravel, Blade or Inertia</p>
+              <h3 class="ar-prompt__title" id="prompt-laravel-title">A Laravel app behind Drawbridge</h3>
+              <p class="ar-prompt__desc">Its door schedule for the gate, and SESAME's gateway driver checking the signed assertion on the way in.</p>
+            </div>
+          </header>
+          <pre class="ar-prompt__text"><code>You are a coding agent putting a Laravel app at Wayne State University behind Drawbridge, the Citadel auth gateway of WELD, the Wayne State application stack. Drawbridge signs the visitor in and sends the app a short-lived signed assertion in the X-Sesame-Assertion header. The app checks it with SESAME's gateway driver and never parses the token itself.
+
+Read first:
+- https://drawbridge.apps.wayne.edu/llms.txt, then the README's Using the assertion in an app and Configuration sections.
+- SESAME's pages, https://sesame.apps.wayne.edu/llms.txt: the gateway driver and its Laravel setup.
+- ADVISOR, the stack's MCP server, if it is connected: list_stack_rules with the permutation that fits this app (laravel-blade, laravel-blade-vue or laravel-inertia-vue) and chapter auth, and read_project_docs with project sesame. If it is not connected, say so and work from the pages.
+- This app's composer.json, config/, routes/ and .env.example.
+
+Task:
+1. Draft this app's entry for Drawbridge's config: id, host, upstream, mode assertion, a default, and the public, protected and api paths the app really has (routes/ tells you).
+2. Set up SESAME's gateway driver the way SESAME's docs say: the issuer Drawbridge signs with, this app's host as the audience, Drawbridge's public signing key, the X-Sesame-Assertion header and the trusted proxy ranges, all as placeholders in .env.example.
+3. Put the auth.sesame middleware on the routes Drawbridge protects, and make sure the api routes answer 401 instead of redirecting.
+4. If a path needs step-up (an Entra authentication context such as c1), mark it in the draft and add sesame.context:c1 to that route. What c1 demands is a Conditional Access policy in Entra, not app code.
+
+Constraints:
+- Assertion mode, not plain headers: a Laravel app can verify the token, so it does.
+- Never trust X-Authenticated-* or any other identity header in the app. Only the verified assertion counts.
+- Keep SESAME's replay guard on. Never commit a key, a secret or a real .env.
+- Ask me before you guess the host, the issuer or the proxy ranges, and before you change auth middleware that is already there.
+
+Output: the config entry, the SESAME settings as placeholders, the files you changed, then your questions.</code></pre>
+        </section>
+        <section class="ar-prompt spec" id="prompt-raw-php" aria-labelledby="prompt-raw-php-title" data-ar-prompt>
+          <header class="ar-prompt__head">
+            <span class="ar-prompt__glyph" aria-hidden="true">03</span>
+            <div>
+              <p class="ar-prompt__kicker">Spec 03 · Raw PHP, no framework</p>
+              <h3 class="ar-prompt__title" id="prompt-raw-php-title">A raw PHP app behind Drawbridge</h3>
+              <p class="ar-prompt__desc">The same door schedule, and SESAME's gateway driver built by hand, with the check placed before any output.</p>
+            </div>
+          </header>
+          <pre class="ar-prompt__text"><code>You are a coding agent putting a raw PHP app (no framework) at Wayne State University behind Drawbridge, the Citadel auth gateway of WELD, the Wayne State application stack. Drawbridge signs the visitor in and sends the app a short-lived signed assertion in the X-Sesame-Assertion header.
+
+Read first:
+- https://drawbridge.apps.wayne.edu/llms.txt, then the README's Using the assertion in an app and Configuration sections.
+- SESAME's pages, https://sesame.apps.wayne.edu/llms.txt: the gateway driver and the Raw PHP section.
+- ADVISOR, the stack's MCP server, if it is connected: list_stack_rules with permutation raw-php (raw-php-vue if the app builds Vue) and chapter auth, and read_project_docs with project sesame. If it is not connected, say so and work from the pages.
+- This app's composer.json, its front controller or entry scripts, and how it signs people in today.
+
+Task:
+1. Draft this app's entry for Drawbridge's config: id, host, upstream, a default, and the public, protected and api paths the app really has.
+2. Assertion mode is the default. Build SESAME's gateway driver as its Raw PHP section shows (public key, issuer, audience, trusted proxies, and a PSR-16 cache for the replay guard), and sign the user in from the verified assertion.
+3. Headers mode is only for an app that cannot verify a token yet. If you think this app is one, say why and ask me before you choose it.
+4. Replace the app's own sign-in only on the paths Drawbridge protects, and show me the diff before you apply it.
+
+Constraints:
+- A raw PHP app has no framework to lean on: show exactly where the check runs, before any output is sent.
+- Never trust an identity header the app did not get from a verified assertion.
+- Keep the replay guard on. Never commit a key, a secret or a real .env.
+- Give separate commands for Windows (PowerShell), macOS and Linux wherever they differ.
+- Ask me before you guess, and before you touch anything that deploys.
+
+Output: the config entry, where the check runs and the diff, then your questions.</code></pre>
+        </section>
+        </div>
+
+        <p class="specs__fine">The contractor reads the same sheets you do: <a href="llms.txt">llms.txt</a> lists the pages, <a href="llms-full.txt">llms-full.txt</a> holds them in one file, and this page has a <a href="index.md" type="text/markdown">Markdown twin</a>. Nothing here phones home; the buttons only copy text or open the tool you picked. No spec lowers the bridge for anyone who has not signed in.</p>
+      </div>
+    </div>
+  </section>
+
   <!-- ==================================================== A-701 site plan -->
   <section class="sheet sheet--site" aria-labelledby="site-title">
     <div class="wsu-container">
@@ -600,6 +736,7 @@
 </footer>
 
 <div class="toast" role="status" aria-live="polite" data-toast></div>
+<script src="assets/agent-ready.js" defer></script>
 <script src="assets/drawbridge.js" defer></script>
 </body>
 </html>

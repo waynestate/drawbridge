@@ -19,6 +19,7 @@
      2. paper, header, tags    6. A-401 assertion, A-501 notes
      3. A-101 hero drawing     7. A-601 build, A-701 site plan, A-801, footer
      4. A-201 passage          8. responsive, 9. motion (only with .motion)
+                               10. A-602 specs (Squire's agent-ready kit)
    ========================================================================== */
 
 /* ------------------------------------------------------ 1. fonts, tokens */
@@ -1176,4 +1177,138 @@ ul.key-plan__list > li img,
 li.route__stop img { transition: transform 160ms ease, filter 160ms ease; }
 ul.key-plan__list > li:has(.part-link:hover) img,
 li.route__stop:has(.part-link:hover) img { transform: translateY(-2px); }
+}
+
+/* ------------------------------ 10. A-602 specs (Squire's agent-ready kit)
+
+   Squire's agent-ready.css lays out the prompt blocks and the page menu; this
+   maps its tokens onto the sheet set. A prompt is a specification sheet for
+   the contractor: a fresh sheet on the board with a ruled ink border, its
+   number in the same boxed tag as the drawings, the brief itself on the
+   drafting grid, the buttons in the hero's hard gold shadow, and the commands
+   on the one dark surface the page allows, the terminal. Nothing here moves
+   unless the visitor allows motion, and then only by a few pixels.          */
+
+:root {
+  --ar-bg: var(--db-sheet);
+  --ar-ink: var(--db-text);
+  --ar-muted: var(--db-text-2);
+  --ar-rule: rgba(12, 84, 73, 0.28);
+  --ar-accent: var(--db-ink);
+  --ar-on-accent: var(--db-sheet);
+  --ar-focus: var(--db-ink);
+  --ar-code-bg: var(--db-paper);
+  --ar-code-ink: var(--db-text);
+  --ar-term-bg: var(--db-term);
+  --ar-term-ink: var(--db-term-text);
+  --ar-display: var(--db-display);
+  --ar-mono: var(--db-mono);
+  --ar-radius: 3px;
+  --ar-shadow: 0 18px 30px -26px rgba(7, 58, 50, 0.55);
+}
+
+.specs { display: grid; gap: 1.75rem; }
+
+/* The sheet: ink border with the drafting margin line inset, like a title block border. */
+.spec {
+  border: var(--db-line);
+  outline: 1px solid rgba(12, 84, 73, 0.28);
+  outline-offset: -7px;
+  padding: clamp(1.25rem, 3vw, 2rem);
+}
+.spec.ar-prompt--lead { box-shadow: 6px 6px 0 var(--db-gold), var(--ar-shadow); }
+
+/* The sheet number, boxed like the drawing tags. */
+.spec .ar-prompt__glyph {
+  width: auto; min-width: 2.8rem; height: 2rem; padding: 0 0.5rem;
+  border: 0; border-radius: 0;
+  background: var(--db-ink); color: var(--db-sheet);
+  font-family: var(--db-mono); font-weight: 700; font-size: 0.875rem; letter-spacing: 0.04em;
+}
+/* The kicker is the hand-lettered annotation the drawings use. */
+.spec .ar-prompt__kicker {
+  font-family: var(--db-hand); font-size: 1.0625rem; letter-spacing: 0; text-transform: none;
+  color: var(--db-gold-ink);
+}
+.spec .ar-prompt__title {
+  font-weight: 800; font-size: clamp(1.6rem, 3.2vw, 2.25rem); line-height: 1;
+  letter-spacing: 0.01em; text-transform: uppercase; color: var(--db-ink);
+}
+
+/* The brief on the drafting grid, with a dimension line running down its edge. */
+.spec .ar-prompt__text {
+  border: 1px solid rgba(12, 84, 73, 0.22);
+  border-left: 3px double var(--db-ink);
+  background-color: var(--db-paper);
+  background-image:
+    linear-gradient(var(--db-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--db-grid) 1px, transparent 1px);
+  background-size: 18px 18px;
+  background-attachment: local;
+}
+.spec .ar-prompt__more { color: var(--db-ink); font-weight: 700; }
+
+.spec .ar-btn { border-radius: 2px; border: 1.5px solid var(--db-ink); color: var(--db-ink); background: var(--db-sheet); }
+.spec .ar-btn:hover { background: var(--db-paper); }
+.spec .ar-btn--primary { background: var(--db-ink); color: var(--db-sheet); box-shadow: 3px 3px 0 var(--db-gold); }
+.spec .ar-btn--primary:hover { background: var(--db-ink-deep); box-shadow: 4px 4px 0 var(--db-gold); }
+.spec .ar-run__label { font-family: var(--db-hand); font-size: 1rem; color: var(--db-text-2); }
+.spec .ar-chip { border-radius: 2px; border: 1.5px solid rgba(12, 84, 73, 0.4); background: var(--db-sheet); color: var(--db-ink); }
+.spec .ar-chip:hover { border-color: var(--db-ink); background: var(--db-paper); }
+/* The chosen tool gets the gold the page keeps for signed things. */
+.spec .ar-chip[aria-expanded="true"] { border-color: var(--db-ink-deep); background: var(--db-gold); color: var(--db-ink-deep); box-shadow: none; }
+.spec .ar-status { color: var(--db-ink); font-weight: 700; }
+
+/* The command panel is a terminal, the same monitor as A-301 and A-601. */
+.spec .ar-cmd { border-radius: 6px; box-shadow: 0 18px 30px -22px rgba(7, 58, 50, 0.7); }
+.spec .ar-cmd .ar-btn { border-color: var(--db-gold); color: var(--db-gold); background: transparent; box-shadow: none; }
+.spec .ar-cmd .ar-btn:hover { background: rgba(255, 204, 51, 0.12); }
+.spec .ar-cmd .ar-seg__btn[aria-pressed="true"] { background: var(--db-gold); color: var(--db-ink-deep); }
+.spec .ar-cmd .ar-status { color: var(--db-term-ok); }
+.spec .ar-cmd :focus-visible { outline-color: var(--db-gold); box-shadow: none; }
+.spec .ar-cmd__note a { color: var(--db-gold-soft); }
+
+.specs__title {
+  display: flex; align-items: center; gap: 0.75rem;
+  margin: 0.75rem 0 0;
+  font-family: var(--db-hand); font-weight: 400; font-size: 1.375rem; color: var(--db-ink);
+}
+.specs__title::after { content: ""; flex: 1; height: 1px; background: var(--db-slate); opacity: 0.6; }
+
+/* Side by side on a wide board, one under the other below it. */
+.specs__paths { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.75rem; align-items: start; }
+.specs__paths .ar-prompt { --ar-preview-lines: 7; }
+.specs__paths .ar-prompt__title { font-size: clamp(1.4rem, 2.4vw, 1.75rem); }
+.specs__fine { max-width: 46rem; margin: 0; color: var(--db-text-2); line-height: 1.6; }
+
+/* The issue note: under the hero's buttons, like "issued for" on a title block. */
+.issue-note {
+  max-width: 34rem; margin-top: 1.5rem; padding-top: 0.6rem;
+  border-top: 1.5px dashed rgba(12, 84, 73, 0.4);
+  gap: 0 1.1rem;
+}
+.issue-note .ar-page__label { font-family: var(--db-hand); font-size: 1rem; letter-spacing: 0; text-transform: none; color: var(--db-gold-ink); }
+.issue-note .ar-page__list { gap: 0 1.1rem; }
+.issue-note .ar-page__link,
+.issue-note .ar-page__btn { font-weight: 700; color: var(--db-ink); }
+.issue-note .ar-status { flex-basis: 100%; color: var(--db-ink); font-weight: 700; }
+
+@media (max-width: 1023px) {
+  .specs__paths { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 480px) {
+  .spec { outline-offset: -5px; }
+  .spec.ar-prompt--lead { box-shadow: 4px 4px 0 var(--db-gold), var(--ar-shadow); }
+  .spec .ar-prompt__glyph { min-width: 2.3rem; height: 1.7rem; font-size: 0.75rem; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .spec .ar-btn--primary { transition: transform 160ms var(--db-ease), box-shadow 160ms var(--db-ease), background 160ms; }
+  .spec .ar-btn--primary:hover { transform: translate(-1px, -1px); }
+}
+
+@media print {
+  .ar-prompt__actions, .ar-cmd, .ar-prompt__more, .issue-note { display: none; }
+  .ar-prompt.is-collapsed .ar-prompt__text { max-height: none; -webkit-mask-image: none; mask-image: none; }
+  .spec.ar-prompt--lead { box-shadow: none; }
 }

@@ -45,16 +45,21 @@
         "fix": "pint",
         "analyse": "phpstan analyse --memory-limit=1G",
         "test": "phpunit",
+        "site:agent-ready": "php bin/agent-ready.php",
+        "site:agent-ready-check": "php bin/agent-ready.php --check",
         "ci": [
             "@composer validate --strict",
             "phpunit",
             "pint --test",
+            "@site:agent-ready-check",
             "phpstan analyse --memory-limit=1G",
             "@composer audit"
         ]
     },
     "scripts-descriptions": {
-        "ci": "Run every CI check: manifest, unit tests, style, static analysis, audit. The container rig has its own script (rig/run.sh or rig/run.ps1)."
+        "ci": "Run every CI check: manifest, unit tests, style, agent-ready files, static analysis, audit. The container rig has its own script (rig/run.sh or rig/run.ps1).",
+        "site:agent-ready": "Rewrite the Markdown twins, llms.txt, llms-full.txt, robots.txt and sitemap.xml in site/ (Squire's agent-ready kit).",
+        "site:agent-ready-check": "Fail when the agent-ready files are stale, a page lacks its Markdown link, a prompt drifts from the docs, or the kit was edited here."
     },
     "bin": [
         "bin/drawbridge"
