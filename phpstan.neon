@@ -1,12 +1,13 @@
-# Same settings as Pinstripe's phpstan/raw.neon. Swap for an include once waynestate/pinstripe is on Packagist.
+# PHPStan settings come from Pinstripe (the stack's coding standard), raw PHP cut.
+# This file adds only DRAWBRIDGE's own paths and PHP version range.
+includes:
+    - vendor/waynestate/pinstripe/phpstan/raw.neon
+
 parameters:
-    level: 8
     paths:
         - src
         - bin/drawbridge
         - bin/metrics
-    reportIgnoresWithoutComments: true
-    reportUnmatchedIgnoredErrors: true
     phpVersion:
         min: 80300
         max: 80599

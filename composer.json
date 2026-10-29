@@ -29,9 +29,13 @@
         "symfony/css-selector": "^7.1",
         "symfony/dom-crawler": "^7.1",
         "symfony/http-client": "^7.1",
-        "symfony/mime": "^7.1"
+        "symfony/mime": "^7.1",
+        "waynestate/pinstripe": "^0.1"
     },
     "config": {
+        "allow-plugins": {
+            "phpstan/extension-installer": true
+        },
         "platform": {
             "php": "8.3.0"
         }

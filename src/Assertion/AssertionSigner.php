@@ -71,7 +71,7 @@ final class AssertionSigner
         $gateway = $this->config->gateway;
         $now = $this->clock->now();
 
-        $builder = (new Builder(new JoseEncoder(), ChainedFormatter::withUnixTimestampDates()))
+        $builder = Builder::new(new JoseEncoder(), ChainedFormatter::withUnixTimestampDates())
             ->issuedBy(self::nonEmpty($gateway->issuer))
             ->permittedFor(self::nonEmpty($app->audience))
             ->relatedTo($subject)
