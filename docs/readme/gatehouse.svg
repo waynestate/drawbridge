@@ -179,7 +179,7 @@ path.visitor__ink{fill:none}
       <circle cx="52" cy="56" r="18" class="cut__bubble"/>
       <text x="52" y="63" class="cut__letter">A</text>
       <path d="M72 56 H112" class="cut__line"/>
-      <text x="122" y="62" class="hand sub">section A–A · scale: one request</text>
+      <text x="122" y="62" class="hand sub">section A-A · scale: one request</text>
     </g>
     <g class="an show-0_6-0_6">
       <circle cx="628" cy="52" r="20" class="detail__ring"/>
@@ -226,7 +226,7 @@ path.visitor__ink{fill:none}
       <path d="M296 400 H436" marker-start="url(#tick)" marker-end="url(#tick)" class="draw dim an show-3_4-0_8"/>
       <text x="366" y="416" class="anno anno--dim an show-3_4-0_8">span: one sign-in</text>
       <path d="M628 90 V380" marker-start="url(#tick)" marker-end="url(#tick)" class="draw dim an show-3_4-0_8"/>
-      <text transform="translate(624 236) rotate(-90)" class="anno anno--dim an show-3_4-0_8">13 rules high</text>
+      <text transform="translate(624 236) rotate(-90)" class="anno anno--dim an show-3_4-0_8">14 rules high</text>
       <path d="M300 486 H430" marker-start="url(#tick)" marker-end="url(#tick)" class="draw dim an show-3_4-0_8"/>
       <text x="365" y="482" class="anno anno--dim an show-3_4-0_8">moat: 60 s deep</text>
       <g transform="translate(150 308)">
@@ -326,8 +326,8 @@ path.visitor__ink{fill:none}
       <line x1="948" y1="672" x2="948" y2="736" class="rule"/>
       <line x1="948" y1="704" x2="1244" y2="704" class="rule"/>
       <text x="766" y="710" class="h h--title">DRAWBRIDGE</text>
-      <text x="767" y="728" class="hand tb tb--dim" style="font-size:15px">Rev 0.1</text>
-      <text x="960" y="694" class="hand tb">A-101 · Gatehouse · section A–A</text>
+      <text x="767" y="728" class="hand tb tb--dim" style="font-size:15px">Rev 0.2</text>
+      <text x="960" y="694" class="hand tb">A-101 · Gatehouse · section A-A</text>
       <text x="960" y="726" class="hand tb" style="font-size:16.5px">One request through the gatehouse</text>
     </g>
   </g>

@@ -1,6 +1,6 @@
 # Drawbridge
 
-> Drawbridge is the auth gateway for WSU's container platform at auth.apps.wayne.edu: one OpenID Connect client, signed in through Microsoft Entra ID, in front of every app. It makes sure the visitor signed in, strips every identity header they brought along, and hands the app a short-lived ES256-signed assertion.
+> Drawbridge is the sign-in gateway we're building for Citadel, Wayne State's container platform: Apache with mod_auth_openidc as one OpenID Connect client for Microsoft Entra ID. It drops any identity header a visitor sends and passes the app a 60-second ES256-signed assertion that SESAME checks. It isn't in front of any apps yet.
 
 **Comes down for signed-in people.**
 
@@ -26,7 +26,7 @@ Every page below is Markdown. The HTML pages send the same Markdown to a client 
 
 ## Pages
 
-- [Drawbridge: Comes down for signed-in people](https://drawbridge.apps.wayne.edu/index.md): Drawbridge is the auth gateway for WSU's container platform at auth.apps.wayne.edu: one OpenID Connect client, signed in through Microsoft Entra ID, in front of every app. It makes sure the visitor signed in, strips every identity header they brought along, and hands the app a short-lived ES256-signed assertion.
+- [Drawbridge: Comes down for signed-in people](https://drawbridge.apps.wayne.edu/index.md): Drawbridge is the sign-in gateway we're building for Citadel, Wayne State's container platform: Apache with mod_auth_openidc as one OpenID Connect client for Microsoft Entra ID. It drops any identity header a visitor sends and passes the app a 60-second ES256-signed assertion that SESAME checks. It isn't in front of any apps yet.
 
 ## Prompts
 

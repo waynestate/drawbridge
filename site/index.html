@@ -8,7 +8,7 @@
 <meta name="stack-env" content="auto">
 <script src="assets/stack-env.js" defer></script>
 <title>Drawbridge: Comes down for signed-in people</title>
-<meta name="description" content="Drawbridge is the auth gateway for WSU's container platform at auth.apps.wayne.edu: one OpenID Connect client, signed in through Microsoft Entra ID, in front of every app. It makes sure the visitor signed in, strips every identity header they brought along, and hands the app a short-lived ES256-signed assertion.">
+<meta name="description" content="Drawbridge is the sign-in gateway we're building for Citadel, Wayne State's container platform: Apache with mod_auth_openidc as one OpenID Connect client for Microsoft Entra ID. It drops any identity header a visitor sends and passes the app a 60-second ES256-signed assertion that SESAME checks. It isn't in front of any apps yet.">
 <meta name="theme-color" content="#f4f1ea">
 <meta name="color-scheme" content="light">
 <link rel="canonical" href="https://drawbridge.apps.wayne.edu/">
@@ -77,9 +77,9 @@
           <dd>The one way into the Citadel. It comes down only for people who are signed in, and goes back up for everyone else.</dd>
         </dl>
 
-        <p class="hero__blurb">One OpenID Connect client at <strong>auth.apps.wayne.edu</strong>, signed in through Microsoft Entra ID, in front of every app on the platform. It makes sure the visitor has a session, throws away any identity header they tried to bring along, and hands the app a 60-second ES256-signed assertion that SESAME verifies.</p>
+        <p class="hero__blurb">Drawbridge is Apache with mod_auth_openidc, set up as one OpenID Connect client for Microsoft Entra ID. Its home will be <strong>auth.apps.wayne.edu</strong>, in front of every app on Citadel. It checks that the visitor has a session, drops any identity header they sent, and passes the app a 60-second ES256-signed assertion that SESAME verifies.</p>
 
-        <p class="hero__blurb hero__weld"><b>Works alongside <a href="https://weld.apps.wayne.edu/">WELD</a>.</b> You don't install it: Drawbridge is the Citadel's front door, and WELD signs in through it with <a href="https://sesame.apps.wayne.edu/">SESAME</a>'s gateway driver.</p>
+        <p class="hero__blurb hero__weld"><b>Works alongside <a href="https://weld.apps.wayne.edu/">WELD</a>.</b> You don't install Drawbridge in your app; it's a Citadel service. It isn't in front of any apps yet, so WELD signs in with <a href="https://sesame.apps.wayne.edu/">SESAME</a> directly for now. Once the gateway is live, Citadel apps switch SESAME to its <code>gateway</code> driver.</p>
 
         <p class="hero__cta">
           <a class="wsu-btn wsu-btn--primary wsu-btn--lg" href="#build-title">Build the gatehouse</a>
@@ -242,7 +242,7 @@
         <li class="passage__room" style="--i:0">
           <span class="passage__no" aria-hidden="true">0</span>
           <h3>Browser</h3>
-          <p>Arrives with whatever headers it likes. It may have brought a forgery.</p>
+          <p>Sends whatever headers it wants, forged ones included.</p>
           <p class="passage__mod">the approach</p>
         </li>
         <li class="passage__room" style="--i:1">
@@ -254,19 +254,19 @@
         <li class="passage__room" style="--i:2">
           <span class="passage__no" aria-hidden="true">2</span>
           <h3>OpenID Connect client</h3>
-          <p>One client for every app, signed in through Entra ID, one session per app host. No session: off to Entra to sign in.</p>
+          <p>One Entra ID client for every app, with a separate session for each app host. Without a session, the browser is sent to Entra to sign in.</p>
           <p class="passage__mod">mod_auth_openidc</p>
         </li>
         <li class="passage__room" style="--i:3">
           <span class="passage__no" aria-hidden="true">3</span>
           <h3>Signer</h3>
-          <p>Mints a fresh ES256 assertion for this request. If it cannot sign, the answer is 503.</p>
+          <p>Signs a new ES256 assertion for each request. If signing fails, the visitor gets a 503.</p>
           <p class="passage__mod">mod_rewrite prg: map + PHP</p>
         </li>
         <li class="passage__room" style="--i:4">
           <span class="passage__no" aria-hidden="true">4</span>
           <h3>App</h3>
-          <p>Gets the request with one signed header, and verifies it with SESAME's <code>gateway</code> driver.</p>
+          <p>Receives the request with one signed header and checks it with SESAME's <code>gateway</code> driver.</p>
           <p class="passage__mod">mod_proxy</p>
         </li>
       </ol>
@@ -274,23 +274,23 @@
       <div class="outcomes" data-reveal>
         <div class="outcome">
           <p class="outcome__kind">login</p>
-          <p class="outcome__what">No session? The browser goes to sign in, then comes back.</p>
+          <p class="outcome__what">No session? The browser goes to Entra to sign in and comes back to the page.</p>
         </div>
         <div class="outcome">
           <p class="outcome__kind">api</p>
-          <p class="outcome__what">No session? A plain <strong>401</strong>. A script is never handed an HTML login page.</p>
+          <p class="outcome__what">Without a session it gets a plain <strong>401</strong>, so a script never receives an HTML login page.</p>
         </div>
         <div class="outcome">
           <p class="outcome__kind">public</p>
-          <p class="outcome__what">Passes through with no identity at all. Public is a decision, not a default.</p>
+          <p class="outcome__what">Passes through with no identity attached. A path is public only if the config says so.</p>
         </div>
         <div class="outcome outcome--warn">
           <p class="outcome__kind">signer down</p>
-          <p class="outcome__what"><strong>503</strong>. A request never reaches the app unsigned.</p>
+          <p class="outcome__what"><strong>503</strong>. Nothing reaches the app unsigned.</p>
         </div>
       </div>
 
-      <p class="margin-note" data-reveal>Why a moat and not a lock on every door: each app doing its own OpenID Connect is another chance to get a nonce, a state check or a token signature wrong. Drawbridge signs in once, in a maintained module, and every app checks one small signed token.</p>
+      <p class="margin-note" data-reveal>Why a moat and not a lock on every door: each app doing its own OpenID Connect is another chance to get a nonce, a state check or a token signature wrong. We'd rather get that right once, in a maintained module (mod_auth_openidc). Each app then checks one small signed token.</p>
     </div>
   </section>
 
@@ -300,7 +300,7 @@
       <header class="sheet__head" data-reveal>
         <p class="sheet-tag"><span class="sheet-tag__no">A-301</span> Door schedule</p>
         <h2 id="schedule-title">Which doors need a key</h2>
-        <p>Each app declares its paths in one config file. Nothing else decides. Rules are exact (<code>/up</code>) or a prefix (<code>/assets/</code>); the longest wins, and exact beats a prefix of the same length. No wildcards, no regular expressions, and the query string never chooses.</p>
+        <p>Each app lists its paths in one config file, and nothing else decides. A rule is exact (<code>/up</code>) or a prefix (<code>/assets/</code>). The longest match wins, and an exact rule beats a prefix of the same length. There are no wildcards or regular expressions, and the query string is never part of the match.</p>
       </header>
 
       <div class="schedule" data-reveal>
@@ -355,7 +355,7 @@
       <header class="sheet__head" data-reveal>
         <p class="sheet-tag"><span class="sheet-tag__no">A-401</span> Detail · the assertion</p>
         <h2 id="detail-title">What crosses the bridge</h2>
-        <p>A compact JWT, minted for every request, good for 60 seconds by default. The key never leaves the signer.</p>
+        <p>A compact JWT, made fresh for every request and valid for 60 seconds by default. The signing key stays in the signer.</p>
       </header>
 
       <div class="detail" data-reveal>
@@ -392,7 +392,7 @@
 
         <div class="stripped">
           <h3>Left at the gate</h3>
-          <p>Removed from every request, in every hyphen and underscore spelling, before authentication runs. Then the gateway sets its own.</p>
+          <p>The guard removes these from every request, in any hyphen or underscore spelling, before authentication runs. Then the gateway sets its own.</p>
           <ul class="stripped__list" role="list">
             <li><s>X-Authenticated-*</s></li>
             <li><s>X-Sesame-*</s></li>
@@ -421,11 +421,11 @@
         <p>From <code>BEST_PRACTICES.md</code>. The contractor shall not improvise.</p>
       </header>
       <ol class="notes" data-reveal>
-        <li><strong>Strip first.</strong> Every inbound identity header, every spelling, every request, before authentication.</li>
+        <li><strong>Strip first.</strong> Inbound identity headers go, in any spelling, before authentication runs on any request.</li>
         <li><strong>Fail closed.</strong> No session, no signature, a refused path, a missing key or a bad config means no access.</li>
         <li><strong>Public is a decision.</strong> A path with no rule gets <code>login</code>. Public paths carry no identity.</li>
         <li><strong>Match the normalised path.</strong> Encoded slashes, backslashes, semicolons and bad UTF-8 are treated as protected.</li>
-        <li><strong>Exact or prefix, nothing clever.</strong> The Apache pattern is built from the literal, never typed by hand.</li>
+        <li><strong>Exact or prefix, nothing clever.</strong> No wildcards or regular expressions. The Apache pattern is built from the literal path.</li>
         <li><strong>Sign narrowly and briefly.</strong> ES256, a pinned <code>typ</code>, one audience per app, a fresh <code>jti</code> each time.</li>
         <li><strong>Let the module do OpenID Connect.</strong> Drawbridge writes no OAuth client. Forged callbacks and missing contexts are refused.</li>
         <li><strong>One session per app host.</strong> A session cookie carried to another host opens nothing there.</li>
@@ -445,7 +445,7 @@
       <header class="sheet__head" data-reveal>
         <p class="sheet-tag"><span class="sheet-tag__no">A-601</span> Construction sequence</p>
         <h2 id="build-title">Build the gatehouse</h2>
-        <p>You need Docker. The PHP component wants PHP 8.3+ and Composer, but the container carries its own, so these steps need nothing else.</p>
+        <p>You need Docker and nothing else. The PHP component needs PHP 8.3 or newer and Composer, and these steps run both inside the <code>composer:2.10.3</code> container.</p>
       </header>
 
       <div class="build" data-reveal>
@@ -490,7 +490,7 @@
 
         <div class="build__side">
           <h3>Then raise it</h3>
-          <p>The entrypoint refuses to start without these: two files mounted read-only and two secrets in the environment. None of them is ever in git.</p>
+          <p>The entrypoint won't start without two files mounted read-only and two secrets in the environment. None of them goes in git.</p>
           <ul class="mounts" role="list">
             <li><code>drawbridge.yaml</code> <span>the per-app config</span></li>
             <li><code>signing.key</code> <span>the ES256 key; <code>keys:generate</code> makes one</span></li>
@@ -538,7 +538,7 @@
       <header class="sheet__head" data-reveal>
         <p class="sheet-tag"><span class="sheet-tag__no">A-602</span> Specifications</p>
         <h2 id="specs-title">Specs for your agent</h2>
-        <p>Your coding agent is the contractor. Hand it a spec: copy one, or run it straight in OpenCode, Claude Code, Codex or ChatGPT. Each one says what to build, what it may not touch, and to send a question back before it guesses.</p>
+        <p>Your coding agent is the contractor. Copy a spec, or open it directly in OpenCode, Claude Code, Codex or ChatGPT. Each spec gives the task and what the agent must leave alone, and tells it to ask you before it guesses.</p>
       </header>
 
       <div class="specs">
@@ -640,7 +640,7 @@ Output: the config entry, where the check runs and the diff, then your questions
         </section>
         </div>
 
-        <p class="specs__fine">The contractor reads the same sheets you do: <a href="llms.txt">llms.txt</a> lists the pages, <a href="llms-full.txt">llms-full.txt</a> holds them in one file, and this page has a <a href="index.md" type="text/markdown">Markdown twin</a>. Nothing here phones home; the buttons only copy text or open the tool you picked. No spec lowers the bridge for anyone who has not signed in.</p>
+        <p class="specs__fine">Agents read the same pages you do. <a href="llms.txt">llms.txt</a> lists them, <a href="llms-full.txt">llms-full.txt</a> has them all in one file, and this page has a <a href="index.md" type="text/markdown">Markdown twin</a>. The page sends nothing anywhere; the buttons only copy text or open the tool you picked. No spec lowers the bridge for anyone who hasn't signed in.</p>
       </div>
     </div>
   </section>
@@ -650,8 +650,8 @@ Output: the config entry, where the check runs and the diff, then your questions
     <div class="wsu-container">
       <header class="sheet__head" data-reveal>
         <p class="sheet-tag"><span class="sheet-tag__no">A-701</span> Site plan</p>
-        <h2 id="site-title">Where the gate stands in WELD</h2>
-        <p><a href="https://weld.apps.wayne.edu/">WELD</a> is the Wayne State app stack: one contract, several paths that agree. Drawbridge is the wall's one door; the rest of the stack lives inside.</p>
+        <h2 id="site-title">Where the gate stands in the stack</h2>
+        <p>Drawbridge is one part of the Wayne State application stack. <a href="https://weld.apps.wayne.edu/">WELD</a> is the Laravel starter app with the rest of it already set up. Once it's live, Drawbridge is the one door in Citadel's wall, and the apps and the stack's other parts run inside.</p>
       </header>
 
       <ol class="route" data-reveal aria-label="A signed-in request, from the gate to the page">
@@ -682,14 +682,14 @@ Output: the config entry, where the check runs and the diff, then your questions
           <li><img src="assets/marks/preflight.png" width="40" height="40" alt=""><span><b><a class="part-link" href="https://preflight.apps.wayne.edu/">Preflight</a></b> the shared CI components</span></li>
           <li><img src="assets/marks/sesame.png" width="40" height="40" alt=""><span><b><a class="part-link" href="https://sesame.apps.wayne.edu/">SESAME</a></b> sign-in inside the app</span></li>
           <li><img src="assets/marks/helmet.png" width="40" height="40" alt=""><span><b><a class="part-link" href="https://helmet.apps.wayne.edu/">HELMET</a></b> security headers and CSP reports</span></li>
-          <li><img src="assets/marks/pinstripe.png" width="40" height="40" alt=""><span><b><a class="part-link" href="https://pinstripe.apps.wayne.edu/">Pinstripe</a></b> the coding standard, pressed</span></li>
-          <li><img src="assets/marks/sourdough.png" width="40" height="40" alt=""><span><b><a class="part-link" href="https://sourdough.apps.wayne.edu/">Sourdough</a></b> the starter that keeps the stack fed</span></li>
-          <li><img src="assets/marks/weld.png" width="40" height="40" alt=""><span><b><a class="part-link" href="https://weld.apps.wayne.edu/">WELD</a></b> every part, already joined</span></li>
-          <li><img src="assets/marks/booster.png" width="40" height="40" alt=""><span><b><a class="part-link" href="https://booster.apps.wayne.edu/">Booster</a></b> keeps an app's PHP current</span></li>
+          <li><img src="assets/marks/pinstripe.png" width="40" height="40" alt=""><span><b><a class="part-link" href="https://pinstripe.apps.wayne.edu/">Pinstripe</a></b> code style presets</span></li>
+          <li><img src="assets/marks/sourdough.png" width="40" height="40" alt=""><span><b><a class="part-link" href="https://sourdough.apps.wayne.edu/">Sourdough</a></b> the raw PHP starter</span></li>
+          <li><img src="assets/marks/weld.png" width="40" height="40" alt=""><span><b><a class="part-link" href="https://weld.apps.wayne.edu/">WELD</a></b> the Laravel starter, with the stack set up</span></li>
+          <li><img src="assets/marks/booster.png" width="40" height="40" alt=""><span><b><a class="part-link" href="https://booster.apps.wayne.edu/">Booster</a></b> upgrades PHP and Laravel one version at a time</span></li>
           <li><img src="assets/marks/rollcall.png" width="40" height="40" alt=""><span><b><a class="part-link" href="https://rollcall.apps.wayne.edu/">Rollcall</a></b> every app answers "present"</span></li>
-          <li><img src="assets/marks/advisor.png" width="40" height="40" alt=""><span><b><a class="part-link" href="https://advisor.apps.wayne.edu/">ADVISOR</a></b> what applies, and what to do next</span></li>
-          <li><img src="assets/marks/squire.png" width="40" height="40" alt=""><span><b><a class="part-link" href="https://squire.apps.wayne.edu/">Squire</a></b> carries the release to Citadel</span></li>
-          <li class="key-plan__here"><img src="brand/drawbridge-avatar-256.png" width="40" height="40" alt=""><span><b>Drawbridge</b> the one OpenID Connect front door <em>you are here</em></span></li>
+          <li><img src="assets/marks/advisor.png" width="40" height="40" alt=""><span><b><a class="part-link" href="https://advisor.apps.wayne.edu/">ADVISOR</a></b> an MCP server your agent can ask</span></li>
+          <li><img src="assets/marks/squire.png" width="40" height="40" alt=""><span><b><a class="part-link" href="https://squire.apps.wayne.edu/">Squire</a></b> the deploy kit for Citadel</span></li>
+          <li class="key-plan__here"><img src="brand/drawbridge-avatar-256.png" width="40" height="40" alt=""><span><b>Drawbridge</b> the sign-in gateway for Citadel's apps <em>you are here</em></span></li>
         </ul>
       </div>
     </div>
@@ -701,7 +701,7 @@ Output: the config entry, where the check runs and the diff, then your questions
       <header class="sheet__head" data-reveal>
         <p class="sheet-tag"><span class="sheet-tag__no">A-801</span> Revision schedule</p>
         <h2 id="rev-title">Drawn, not yet built</h2>
-        <p>Release 0.2 moves the chain to OpenID Connect with Entra ID; the gate, the guard, the signer and the rig stay. What waits is listed in <code>OPEN_QUESTIONS.md</code>, with the safer default the code uses until then.</p>
+        <p>Release 0.2 (not released yet) swaps SAML for OpenID Connect with Entra ID. The guard, the signer and the rig work as before. So far only the gateway image is built: it will run as a service on Citadel, and the routing in front of it is still the platform team's to design. The items below come from <code>OPEN_QUESTIONS.md</code>, each with the safer default the code uses until it's built.</p>
       </header>
       <div class="wsu-table-wrap" data-reveal tabindex="0" role="region" aria-label="Planned revisions">
         <table class="rev-table">
