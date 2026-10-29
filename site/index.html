@@ -7,8 +7,8 @@
      points them at a local stack server in dev; content: auto, production or dev. -->
 <meta name="stack-env" content="auto">
 <script src="assets/stack-env.js" defer></script>
-<title>DRAWBRIDGE: Comes down for signed-in people</title>
-<meta name="description" content="DRAWBRIDGE is the auth gateway for WSU's container platform at auth.apps.wayne.edu: one OpenID Connect client, signed in through Microsoft Entra ID, in front of every app. It makes sure the visitor signed in, strips every identity header they brought along, and hands the app a short-lived ES256-signed assertion.">
+<title>Drawbridge: Comes down for signed-in people</title>
+<meta name="description" content="Drawbridge is the auth gateway for WSU's container platform at auth.apps.wayne.edu: one OpenID Connect client, signed in through Microsoft Entra ID, in front of every app. It makes sure the visitor signed in, strips every identity header they brought along, and hands the app a short-lived ES256-signed assertion.">
 <meta name="theme-color" content="#f4f1ea">
 <meta name="color-scheme" content="light">
 <link rel="icon" href="brand/favicon.ico" sizes="any">
@@ -59,7 +59,7 @@
       <div class="hero__copy">
         <p class="sheet-tag"><span class="sheet-tag__no">A-101</span> Gatehouse · section A-A</p>
         <h1 class="hero__title" id="hero-title">
-          <span class="wsu-sr-only">DRAWBRIDGE</span>
+          <span class="wsu-sr-only">Drawbridge</span>
           <span class="hero__letters" aria-hidden="true"><span style="--i:0">D</span><span style="--i:1">R</span><span style="--i:2">A</span><span style="--i:3">W</span><span style="--i:4">B</span><span style="--i:5">R</span><span style="--i:6">I</span><span style="--i:7">D</span><span style="--i:8">G</span><span style="--i:9">E</span></span>
         </h1>
         <p class="hero__tagline">Comes down for signed-in people.</p>
@@ -82,12 +82,12 @@
         <!-- The mark, in a detail callout: the drawing beside it is detail 1,
              enlarged. The mark itself is never redrawn or edited. -->
         <div class="drawing__callout">
-          <span class="drawing__bubble"><img src="brand/drawbridge-avatar-256.png" width="256" height="256" alt="DRAWBRIDGE mark: a cream gatehouse tower on a green tile, its bridge lowered on a gold chain"></span>
+          <span class="drawing__bubble"><img src="brand/drawbridge-avatar-256.png" width="256" height="256" alt="Drawbridge mark: a cream gatehouse tower on a green tile, its bridge lowered on a gold chain"></span>
           <span class="drawing__callout-label" aria-hidden="true">1 · enlarged</span>
         </div>
 
         <svg class="gate" viewBox="0 0 640 500" role="img" aria-labelledby="gate-title gate-desc">
-          <title id="gate-title">Section through the DRAWBRIDGE gatehouse</title>
+          <title id="gate-title">Section through the Drawbridge gatehouse</title>
           <desc id="gate-desc">An architect's section: a visitor stands on the approach bank, a moat lies between the bank and the gatehouse, and the drawbridge hangs from a gold chain. Inside the gatehouse are the header guard, the OpenID Connect client and the assertion signer; Entra ID, the identity provider, sits off the sheet; the passage leads to the app.</desc>
           <defs>
             <pattern id="hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
@@ -272,7 +272,7 @@
         </div>
       </div>
 
-      <p class="margin-note" data-reveal>Why a moat and not a lock on every door: each app doing its own OpenID Connect is another chance to get a nonce, a state check or a token signature wrong. DRAWBRIDGE signs in once, in a maintained module, and every app checks one small signed token.</p>
+      <p class="margin-note" data-reveal>Why a moat and not a lock on every door: each app doing its own OpenID Connect is another chance to get a nonce, a state check or a token signature wrong. Drawbridge signs in once, in a maintained module, and every app checks one small signed token.</p>
     </div>
   </section>
 
@@ -409,7 +409,7 @@
         <li><strong>Match the normalised path.</strong> Encoded slashes, backslashes, semicolons and bad UTF-8 are treated as protected.</li>
         <li><strong>Exact or prefix, nothing clever.</strong> The Apache pattern is built from the literal, never typed by hand.</li>
         <li><strong>Sign narrowly and briefly.</strong> ES256, a pinned <code>typ</code>, one audience per app, a fresh <code>jti</code> each time.</li>
-        <li><strong>Let the module do OpenID Connect.</strong> DRAWBRIDGE writes no OAuth client. Forged callbacks and missing contexts are refused.</li>
+        <li><strong>Let the module do OpenID Connect.</strong> Drawbridge writes no OAuth client. Forged callbacks and missing contexts are refused.</li>
         <li><strong>One session per app host.</strong> A session cookie carried to another host opens nothing there.</li>
         <li><strong>Overwrite forwarded headers.</strong> <code>X-Forwarded-*</code> come from the gateway, never the client.</li>
         <li><strong>Secrets stay out.</strong> Keys are mounted files; the client secret and passphrase live in the environment. Logs carry a reason code, never a subject or a token.</li>
@@ -512,13 +512,13 @@
       <header class="sheet__head" data-reveal>
         <p class="sheet-tag"><span class="sheet-tag__no">A-701</span> Site plan</p>
         <h2 id="site-title">Where the gate stands in WELD</h2>
-        <p><a href="https://weld.apps.wayne.edu/">WELD</a> is the Wayne State app stack: one contract, several paths that agree. DRAWBRIDGE is the wall's one door; the rest of the stack lives inside.</p>
+        <p><a href="https://weld.apps.wayne.edu/">WELD</a> is the Wayne State app stack: one contract, several paths that agree. Drawbridge is the wall's one door; the rest of the stack lives inside.</p>
       </header>
 
       <ol class="route" data-reveal aria-label="A signed-in request, from the gate to the page">
         <li class="route__stop route__stop--here" style="--i:0">
           <span class="route__icon"><img src="brand/drawbridge-avatar-256.png" width="256" height="256" alt=""></span>
-          <span class="route__name">DRAWBRIDGE</span><span class="route__role">signs the visitor in, once</span>
+          <span class="route__name">Drawbridge</span><span class="route__role">signs the visitor in, once</span>
         </li>
         <li class="route__stop" style="--i:1">
           <span class="route__icon"><img src="assets/marks/sesame.png" width="256" height="256" alt=""></span>
@@ -540,17 +540,17 @@
           <li><span class="key-plan__icon key-plan__icon--tile"><img src="assets/marks/wayneui.svg" width="30" height="30" alt=""></span><span><b><a class="part-link" href="https://wayneui.apps.wayne.edu/">WayneUI</a></b> the interface layer</span></li>
           <li><img src="assets/marks/creed.png" width="40" height="40" alt=""><span><b><a class="part-link" href="https://creed.apps.wayne.edu/">CREED</a></b> the shared rules and policy</span></li>
           <li><img src="assets/marks/proctor.png" width="40" height="40" alt=""><span><b><a class="part-link" href="https://proctor.apps.wayne.edu/">PROCTOR</a></b> checks an app against the policy</span></li>
-          <li><img src="assets/marks/preflight.png" width="40" height="40" alt=""><span><b><a class="part-link" href="https://preflight.apps.wayne.edu/">PREFLIGHT</a></b> the shared CI components</span></li>
+          <li><img src="assets/marks/preflight.png" width="40" height="40" alt=""><span><b><a class="part-link" href="https://preflight.apps.wayne.edu/">Preflight</a></b> the shared CI components</span></li>
           <li><img src="assets/marks/sesame.png" width="40" height="40" alt=""><span><b><a class="part-link" href="https://sesame.apps.wayne.edu/">SESAME</a></b> sign-in inside the app</span></li>
           <li><img src="assets/marks/helmet.png" width="40" height="40" alt=""><span><b><a class="part-link" href="https://helmet.apps.wayne.edu/">HELMET</a></b> security headers and CSP reports</span></li>
           <li><img src="assets/marks/pinstripe.png" width="40" height="40" alt=""><span><b><a class="part-link" href="https://pinstripe.apps.wayne.edu/">Pinstripe</a></b> the coding standard, pressed</span></li>
           <li><img src="assets/marks/sourdough.png" width="40" height="40" alt=""><span><b><a class="part-link" href="https://sourdough.apps.wayne.edu/">Sourdough</a></b> the starter that keeps the stack fed</span></li>
           <li><img src="assets/marks/weld.png" width="40" height="40" alt=""><span><b><a class="part-link" href="https://weld.apps.wayne.edu/">WELD</a></b> every part, already joined</span></li>
-          <li><img src="assets/marks/booster.png" width="40" height="40" alt=""><span><b><a class="part-link" href="https://booster.apps.wayne.edu/">BOOSTER</a></b> keeps an app's PHP current</span></li>
-          <li><img src="assets/marks/rollcall.png" width="40" height="40" alt=""><span><b><a class="part-link" href="https://rollcall.apps.wayne.edu/">ROLLCALL</a></b> every app answers "present"</span></li>
+          <li><img src="assets/marks/booster.png" width="40" height="40" alt=""><span><b><a class="part-link" href="https://booster.apps.wayne.edu/">Booster</a></b> keeps an app's PHP current</span></li>
+          <li><img src="assets/marks/rollcall.png" width="40" height="40" alt=""><span><b><a class="part-link" href="https://rollcall.apps.wayne.edu/">Rollcall</a></b> every app answers "present"</span></li>
           <li><img src="assets/marks/advisor.png" width="40" height="40" alt=""><span><b><a class="part-link" href="https://advisor.apps.wayne.edu/">ADVISOR</a></b> what applies, and what to do next</span></li>
-          <li><img src="assets/marks/squire.png" width="40" height="40" alt=""><span><b><a class="part-link" href="https://squire.apps.wayne.edu/">SQUIRE</a></b> carries the release to Citadel</span></li>
-          <li class="key-plan__here"><img src="brand/drawbridge-avatar-256.png" width="40" height="40" alt=""><span><b>DRAWBRIDGE</b> the one OpenID Connect front door <em>you are here</em></span></li>
+          <li><img src="assets/marks/squire.png" width="40" height="40" alt=""><span><b><a class="part-link" href="https://squire.apps.wayne.edu/">Squire</a></b> carries the release to Citadel</span></li>
+          <li class="key-plan__here"><img src="brand/drawbridge-avatar-256.png" width="40" height="40" alt=""><span><b>Drawbridge</b> the one OpenID Connect front door <em>you are here</em></span></li>
         </ul>
       </div>
     </div>
@@ -586,7 +586,7 @@
 <footer class="title-block">
   <div class="wsu-container">
     <div class="title-block__grid">
-      <div class="tb tb--mark"><img src="brand/drawbridge-avatar-256.png" width="72" height="72" alt=""><span class="tb__project">DRAWBRIDGE</span></div>
+      <div class="tb tb--mark"><img src="brand/drawbridge-avatar-256.png" width="72" height="72" alt=""><span class="tb__project">Drawbridge</span></div>
       <div class="tb"><span class="tb__k">Home</span><span class="tb__v">auth.apps.wayne.edu</span></div>
       <div class="tb"><span class="tb__k">Scale</span><span class="tb__v">1 request : 1 assertion</span></div>
       <div class="tb"><span class="tb__k">Checked</span><span class="tb__v"><code>composer ci</code></span></div>
