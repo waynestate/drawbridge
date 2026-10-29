@@ -39,6 +39,7 @@ same signed assertion for SESAME; only the rope to the identity provider is new.
 
 ### Added
 
+- Added: agent-ready site (prompt blocks, Markdown twins, llms.txt), from Squire's kit.
 - Gateway error pages: 403, 502, 503 and 504 answer with a small self-contained page (inline CSS, system fonts, no
   scripts, no external assets, dark-mode aware) served from `/_drawbridge/errors/`. 401 stays bare for api callers,
   and the `/metrics` endpoint keeps its empty-body 403.
