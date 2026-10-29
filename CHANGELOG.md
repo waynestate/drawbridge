@@ -2,6 +2,12 @@
 
 All notable changes are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+
+- Added: README section on getting WSU values from Playbook.
+
 ## 0.2.0 (unreleased)
 
 The drawbridge changes its chain: Microsoft Entra ID over OpenID Connect replaces SAML. Same gate, same guards,
