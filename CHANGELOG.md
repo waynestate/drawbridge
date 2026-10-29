@@ -38,6 +38,9 @@ same signed assertion for SESAME; only the rope to the identity provider is new.
 
 ### Added
 
+- Gateway error pages: 403, 502, 503 and 504 answer with a small self-contained page (inline CSS, system fonts, no
+  scripts, no external assets, dark-mode aware) served from `/_drawbridge/errors/`. 401 stays bare for api callers,
+  and the `/metrics` endpoint keeps its empty-body 403.
 - `auth_context` on a path rule (`c1` to `c99`): the gateway asks Entra for the context with the `claims` request
   parameter and requires it in the ID token's `acrs` array, sending a signed-in visitor without it back to step up
   (`api` paths answer 401).

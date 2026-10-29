@@ -108,6 +108,18 @@ the gateway session for that host and sends the browser through Entra's sign-out
 discovery document) back to the address. An address on another host is refused, so the link cannot be used to bounce
 visitors elsewhere.
 
+### Error pages
+
+The errors the gateway answers itself get a small page of their own instead of Apache's default English wall: 403
+(an unknown host or a refused path), 502 and 504 (the app is down or taking too long) and 503 (the signer cannot
+sign). Each page is one self-contained HTML file under `docker/gateway/errors/`: inline CSS, system fonts, no
+scripts, no external assets, dark-mode aware, and no hostname or product name in the text. They are served from
+`/_drawbridge/errors/`, which the app hosts keep out of the proxy. Two answers stay deliberately plain: an `api`
+path keeps its bare 401, because a script must never be handed an HTML login page, and the `/metrics` endpoint keeps
+its empty-body 403 (and 404), because a scrape must not look like a page. The endpoint is not routed by the gateway
+config, so these pages cannot reach it; if you wire it up as the Metrics section describes, keep the empty body
+inside that location.
+
 ## Install and quick start
 
 You need Docker. The PHP component needs PHP 8.3 or newer and Composer, but the container carries its own.
