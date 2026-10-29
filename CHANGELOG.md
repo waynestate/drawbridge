@@ -2,12 +2,6 @@
 
 All notable changes are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
-
-### Added
-
-- Added: README section on getting WSU values from Playbook.
-
 ## 0.2.0 (unreleased)
 
 The drawbridge changes its chain: Microsoft Entra ID over OpenID Connect replaces SAML. Same gate, same guards,
@@ -45,6 +39,7 @@ same signed assertion for SESAME; only the rope to the identity provider is new.
 
 ### Added
 
+- README section on getting WSU values from Playbook.
 - Added: agent-ready site (prompt blocks, Markdown twins, llms.txt), from Squire's kit.
 - Gateway error pages: 403, 502, 503 and 504 answer with a small self-contained page (inline CSS, system fonts, no
   scripts, no external assets, dark-mode aware) served from `/_drawbridge/errors/`. 401 stays bare for api callers,

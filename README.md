@@ -202,7 +202,7 @@ One app registration covers every app host. In the Entra admin center, under App
    send `accessid` leaves `oidc.user_claim` at `preferred_username`.
 5. **Overview.** Copy the Directory (tenant) ID into `oidc.issuer`
    (`https://login.microsoftonline.com/<tenant-id>/v2.0`) and the Application (client) ID into `oidc.client_id`.
-   Neither is a secret, but neither belongs in this repository either. The tenant id itself is in Playbook as
+   Neither is a secret, but neither belongs in this repository either. The issuer is in Playbook as
    `SESAME_OAUTH2_ISSUER`; see the WSU values (Playbook) section below.
 6. **Authentication contexts** (only if a path uses `auth_context`): in Conditional Access, create the context
    (`c1` ...), and a policy that targets it with whatever it should demand.
