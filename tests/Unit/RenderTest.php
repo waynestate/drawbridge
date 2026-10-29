@@ -276,4 +276,94 @@ final class RenderTest extends TestCase
         }
     }
 
+    public function testEveryAppHostAddsTheTwoSetIfEmptyHeaders(): void
+    {
+        $conf = (new ApacheRenderer())->render(Fixtures::config(), $this->options());
+
+        foreach (Fixtures::config()->apps as $app) {
+            $block = $this->appHostBlock($conf, $app->id);
+
+            $this->assertStringContainsString('Header always setifempty X-Content-Type-Options "nosniff"', $block);
+            $this->assertStringContainsString('Header always setifempty Referrer-Policy "strict-origin-when-cross-origin"', $block);
+        }
+    }
+
+    public function testHstsIsAddedOnlyWhenThePublicSchemeIsHttps(): void
+    {
+        $https = (new ApacheRenderer())->render(Fixtures::config(), $this->options());
+        $http = (new ApacheRenderer())->render(Fixtures::config(), new RenderOptions('/c.yaml', '/o', scheme: 'http'));
+
+        $this->assertSame(count(Fixtures::config()->apps), substr_count($https, 'Header always setifempty Strict-Transport-Security "max-age=31536000"'));
+        $this->assertStringNotContainsString('Strict-Transport-Security', $http);
+    }
+
+    public function testGatewayAnsweredLocationsCarryTheirOwnHeaders(): void
+    {
+        $conf = (new ApacheRenderer())->render(Fixtures::config(), $this->options());
+
+        // One oidc location per app host, each answered by the gateway itself.
+        $count = 0;
+        $offset = 0;
+
+        while (($start = strpos($conf, '<Location "/_drawbridge/oidc">', $offset)) !== false) {
+            $end = (int) strpos($conf, '</Location>', $start);
+            $block = substr($conf, $start, $end - $start);
+
+            $this->assertStringContainsString('Header always set Cache-Control "no-store"', $block);
+            $this->assertStringContainsString('Header always set Content-Security-Policy "frame-ancestors \'none\'"', $block);
+
+            $count++;
+            $offset = $end;
+        }
+
+        $this->assertSame(count(Fixtures::config()->apps), $count);
+
+        $up = $this->locationBlock($conf, (int) strpos($conf, '<Location "/_drawbridge/up">'));
+
+        $this->assertStringContainsString('Header always set Cache-Control "no-store"', $up);
+        $this->assertStringContainsString('Header always set Content-Security-Policy "frame-ancestors \'none\'"', $up);
+    }
+
+    public function testNoAppHostOverridesAHeaderAnAppCouldSend(): void
+    {
+        $conf = (new ApacheRenderer())->render(Fixtures::config(), $this->options());
+
+        foreach (Fixtures::config()->apps as $app) {
+            $block = $this->appHostBlock($conf, $app->id);
+
+            $this->assertStringNotContainsString('Header always set X-Content-Type-Options', $block);
+            $this->assertStringNotContainsString('Header always set Referrer-Policy', $block);
+            $this->assertStringNotContainsString('Header always set Strict-Transport-Security', $block);
+        }
+    }
+
+    public function testTheDefaultHostSaysNoStoreAndNoSniff(): void
+    {
+        $conf = (new ApacheRenderer())->render(Fixtures::config(), $this->options());
+        $start = (int) strpos($conf, 'ServerName drawbridge-default.invalid');
+        $end = (int) strpos($conf, '</VirtualHost>', $start);
+        $block = substr($conf, $start, $end - $start);
+
+        $this->assertStringContainsString('Header always set Cache-Control "no-store"', $block);
+        $this->assertStringContainsString('Header always setifempty X-Content-Type-Options "nosniff"', $block);
+    }
+
+    /** The rendered virtual host for one app: from its "# App:" comment to the next app or the end of the file. */
+    private function appHostBlock(string $conf, string $id): string
+    {
+        $marker = '# App: ' . $id . "\n";
+        $rest = substr($conf, (int) strpos($conf, $marker) + strlen($marker));
+        $next = strpos($rest, "# App: \n");
+
+        return $next === false ? $rest : substr($rest, 0, $next);
+    }
+
+    /** One rendered <Location> block: from its opening tag at $start to the closing tag. */
+    private function locationBlock(string $conf, int $start): string
+    {
+        $end = (int) strpos($conf, '</Location>', $start);
+
+        return substr($conf, $start, $end - $start);
+    }
+
 }
