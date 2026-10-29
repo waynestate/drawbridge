@@ -40,33 +40,45 @@ final class IpAllowList
     {
         // The docblock promises list<string>, but a caller can still pass a
         // non-string at runtime; validate each entry before trusting it.
-        /** @var list<mixed> $raw */
-        $raw = $entries;
         $this->entries = [];
-        foreach ($raw as $entry) {
-            if (!is_string($entry) || $entry === '') {
-                throw new \InvalidArgumentException(
-                    'Metrics allow-list entries must be non-empty strings; got '
-                    . get_debug_type($entry) . '.',
-                );
-            }
-
-            if ($entry === '*') {
-                throw new \InvalidArgumentException(
-                    'The "*" entry allows every client and is not allowed.',
-                );
-            }
-
-            if (str_contains($entry, '/')) {
-                $this->validateCidr($entry);
-            } elseif (filter_var($entry, FILTER_VALIDATE_IP) === false) {
-                throw new \InvalidArgumentException(
-                    "Not a valid IPv4 or IPv6 address: \"$entry\".",
-                );
-            }
-
-            $this->entries[] = $entry;
+        foreach ($entries as $entry) {
+            $this->entries[] = self::validateEntry($entry);
         }
+    }
+
+    /**
+     * Validate one allow-list entry and return it.
+     *
+     * @param mixed $entry A raw entry as the caller passed it; the docblock
+     *                     promise is checked here, at runtime.
+     *
+     * @throws \InvalidArgumentException If an entry is not a valid address or
+     *                                   CIDR, is a /0 range, or is "*".
+     */
+    private static function validateEntry(mixed $entry): string
+    {
+        if (!is_string($entry) || $entry === '') {
+            throw new \InvalidArgumentException(
+                'Metrics allow-list entries must be non-empty strings; got '
+                . get_debug_type($entry) . '.',
+            );
+        }
+
+        if ($entry === '*') {
+            throw new \InvalidArgumentException(
+                'The "*" entry allows every client and is not allowed.',
+            );
+        }
+
+        if (str_contains($entry, '/')) {
+            self::validateCidr($entry);
+        } elseif (filter_var($entry, FILTER_VALIDATE_IP) === false) {
+            throw new \InvalidArgumentException(
+                "Not a valid IPv4 or IPv6 address: \"$entry\".",
+            );
+        }
+
+        return $entry;
     }
 
     /**
@@ -184,7 +196,7 @@ final class IpAllowList
      *                                   for the address family. A /0 prefix
      *                                   is refused: it allows every address.
      */
-    private function validateCidr(string $cidr): void
+    private static function validateCidr(string $cidr): void
     {
         [$subnet, $bits] = explode('/', $cidr, 2);
 
