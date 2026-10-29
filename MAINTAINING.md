@@ -52,7 +52,7 @@ Settings are described in "Configuration" and "Environment variables" in the REA
 
 - **From the Entra app registration** (single tenant, Web platform, one redirect URI per app host): the tenant's
   issuer, the client identifier, a client secret, and optional claims (`accessid` as the subject, `email`,
-  `auth_time`, `acrs`, and `wsuRoles` as a mapped claim).
+  `auth_time`, `acrs`, and `wsu_roles` as a mapped claim).
 - **Secrets, as environment variables in the deployment's secret store:** `DRAWBRIDGE_OIDC_CLIENT_SECRET` and
   `DRAWBRIDGE_OIDC_CRYPTO_PASSPHRASE` (32 characters or more).
 - **The assertion signing key:** an ES256 key made with `keys:generate`, mounted as a file, with its `kid` from the
