@@ -63,6 +63,10 @@ same signed assertion for SESAME; only the rope to the identity provider is new.
   `no-store` too. HSTS carries no `includeSubDomains` and no `preload`: the gateway serves many hosts and must not
   decide that for them.
 
+### Fixed
+
+- Fixed: stale capability claims in the site and README.
+
 ### Removed
 
 - `sp:metadata` (`MetadataCommand`, `MetadataRenderer`), the SAML rig IdP, `SamlTest`, and the

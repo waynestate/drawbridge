@@ -46,7 +46,7 @@
       <a href="#detail-title"><span class="sheet-index__no">A-401</span> Assertion</a>
       <a href="#build-title"><span class="sheet-index__no">A-601</span> Build</a>
     </nav>
-    <span class="brand__rev" title="Version">Rev 0.1</span>
+    <span class="brand__rev" title="Version">Rev 0.2</span>
   </div>
 </header>
 
@@ -169,7 +169,7 @@
             <text class="anno anno--dim" x="366" y="416">span: one sign-in</text>
 
             <path class="draw dim" d="M628 90 V380" marker-start="url(#tick)" marker-end="url(#tick)"/>
-            <text class="anno anno--dim" transform="translate(624 236) rotate(-90)">13 rules high</text>
+            <text class="anno anno--dim" transform="translate(624 236) rotate(-90)">14 rules high</text>
 
             <path class="draw dim" d="M300 486 H430" marker-start="url(#tick)" marker-end="url(#tick)"/>
             <text class="anno anno--dim" x="365" y="482">moat: 60 s deep</text>
@@ -399,7 +399,7 @@
     <div class="wsu-container">
       <header class="sheet__head" data-reveal>
         <p class="sheet-tag"><span class="sheet-tag__no">A-501</span> General notes</p>
-        <h2 id="notes-title">Thirteen rules, each with a test</h2>
+        <h2 id="notes-title">Fourteen rules, each with a test</h2>
         <p>From <code>BEST_PRACTICES.md</code>. The contractor shall not improvise.</p>
       </header>
       <ol class="notes" data-reveal>
@@ -416,6 +416,7 @@
         <li><strong>Do not trust the network.</strong> The app verifies the signature even if only the gateway can reach it.</li>
         <li><strong>Run small and boring.</strong> Non-root, port above 1024, state under <code>/tmp</code>, logs to stdout.</li>
         <li><strong>Bounded dependencies.</strong> No <code>*</code>, no <code>dev-master</code>; <code>composer audit</code> runs in CI.</li>
+        <li><strong>Add headers, never overwrite.</strong> The gateway's headers ride on proxied answers only where the app sent none, so HELMET's stay.</li>
       </ol>
     </div>
   </section>
@@ -573,7 +574,7 @@
             <tr><td><span class="delta">next</span></td><td>Bearer tokens on API paths</td><td>An <code>api</code> path without a session gets a plain 401.</td></tr>
             <tr><td><span class="delta">next</span></td><td>Two signing keys at once, for rotation</td><td>One key, one <code>kid</code>; rotation is a short coordinated window.</td></tr>
             <tr><td><span class="delta">next</span></td><td>Identity on public paths, if wanted</td><td>Public means no identity, ever.</td></tr>
-            <tr><td><span class="delta">next</span></td><td>Prometheus metrics, off by default</td><td>Logs to stdout and stderr.</td></tr>
+            <tr><td><span class="delta">next</span></td><td>Live signer counters on /metrics</td><td>The off-by-default endpoint reports build info only; counters stay in the signer.</td></tr>
           </tbody>
         </table>
       </div>
