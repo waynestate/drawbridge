@@ -8,19 +8,21 @@ Checks: `composer ci` (the same command runs on GitLab and GitHub). The containe
 
 > The one way into the Citadel. It only comes down for people who signed in.
 
-Drawbridge is the Citadel auth gateway at `auth.apps.wayne.edu`: one OpenID Connect client, signed in through
-Microsoft Entra ID, for every app on the platform. It sits in front of the apps as a reverse proxy, makes sure the
-visitor has a session, throws away any identity header the visitor tried to bring along, and passes the app either a
+Drawbridge is the sign-in gateway for the apps on Citadel, Wayne State's container platform. It is Apache with
+mod_auth_openidc, set up as one OpenID Connect client for Microsoft Entra ID. It is not live yet: its home will be
+`auth.apps.wayne.edu`, in front of every app on the platform, once the Citadel routing for it exists. Release 0.2 is
+unreleased; so far only the gateway image is built, and it will run as a service on Citadel. As a reverse proxy it
+checks that the visitor has a session, drops any identity header the visitor sent, and passes the app either a
 short-lived signed assertion that SESAME's `gateway` driver verifies, or plain `X-Authenticated-*` headers for apps
 that cannot verify a token yet. Which paths need a login, and which need an Entra authentication context on top, is
 declared per app in a config file. Nothing else decides it.
 
-Why a moat and not a lock on each door: every app doing its own OpenID Connect is another chance to get a nonce,
-a state check or a token signature wrong. Drawbridge does the sign-in once, in a maintained module
-(mod_auth_openidc), and every app only has to check one small signed token.
+Why a moat and not a lock on every door: each app doing its own OpenID Connect is another chance to get a nonce,
+a state check or a token signature wrong. We'd rather get that right once, in a maintained module
+(mod_auth_openidc). Each app then checks one small signed token.
 
-This repository is published from Wayne State University's internal GitLab and mirrored here. Changes land there
-first.
+Development happens on Wayne State's GitLab. This GitHub repository is a read-only release mirror: `main` and tags
+are copied here automatically, and changes, issues and merge requests go to GitLab first.
 
 Every page below is Markdown. The HTML pages send the same Markdown to a client that asks for `text/markdown`. Written by Squire's agent-ready kit from the README and the pages; do not edit.
 
