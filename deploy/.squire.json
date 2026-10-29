@@ -3,7 +3,8 @@
     "version": "0.3.3",
     "target": "raw",
     "groups": [
-        "release"
+        "release",
+        "parity"
     ],
     "files": {
         ".env.squire.example": "48a660a9052290cd388e9ddd3914b0324ac99ed967adcfbed69bf2db6f72a4a6",
@@ -17,7 +18,7 @@
         ".squire/vhost.conf": "0197be7c59f4caf10ade0ae223f5ddc75b9b0c962fec76d8e9dabd27408f35ff",
         "build.sh": "7fc37e4a0618d8f5c1fd1941200f80809af4241daf78fdd2172144ce2cf1e810",
         "deployments/001-first-release.sh": "adb3a9eb9a7d5b6cfa3f50043169b97253bab90c40ff37adba44201326557803",
-        "docker-compose.squire.yml": "1d8e7b74ca7b19fec643c23c15453cf9182ab5064e64a03260bf38cb670e36bd",
+        "docker-compose.squire.yml": "b63f411697c670625fb375822e4a393a05e5a1bcc0d08ae50763096a5cacb075",
         "health.php": "b691e07f29b900750d1c4c9ebb93916998e97502155effb2c2fe69691cf17a04",
         "public/up.php": "84d1b3d8823fcd5519fbe92988f822ce68cdc05eff2c889814deb3f33982600a",
         "scripts/parity.ps1": "b72c0d155801b1dadf8d84d6b3647bd1a4e699936fffb68814cfd3341ff308e2",
