@@ -54,6 +54,13 @@ same signed assertion for SESAME; only the rope to the identity provider is new.
   (`drawbridge_signing_requests_total`, `drawbridge_assertions_signed_total`,
   `drawbridge_assertion_errors_total{reason}`) are kept in the signer for in-process use and are not registered on
   the endpoint until a shared store lets it see the signer's counters; labels carry no identity, claim, or token.
+- Response headers: every proxied answer gets `X-Content-Type-Options: nosniff` and
+  `Referrer-Policy: strict-origin-when-cross-origin`, plus `Strict-Transport-Security: max-age=31536000` when the
+  public scheme is https, each with `setifempty` so an app that sends its own header through HELMET keeps it. The
+  `/_drawbridge/` locations the gateway answers itself get `Cache-Control: no-store` and
+  `Content-Security-Policy: frame-ancestors 'none'`, and the default host answers its 403 and error pages with
+  `no-store` too. HSTS carries no `includeSubDomains` and no `preload`: the gateway serves many hosts and must not
+  decide that for them.
 
 ### Removed
 

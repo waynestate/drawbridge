@@ -120,6 +120,20 @@ its empty-body 403 (and 404), because a scrape must not look like a page. The en
 config, so these pages cannot reach it; if you wire it up as the Metrics section describes, keep the empty body
 inside that location.
 
+### Response headers
+
+Apps send their own security headers through HELMET, so the gateway never overrides one. On every proxied answer it
+adds `X-Content-Type-Options: nosniff` and `Referrer-Policy: strict-origin-when-cross-origin` with `setifempty`, and
+an app that sends either keeps its own. When the public scheme is https it also adds
+`Strict-Transport-Security: max-age=31536000` the same way, with no `includeSubDomains` and no `preload`: the gateway
+serves many hosts and must not decide subdomain or preload policy for them.
+
+The pages the gateway answers itself are not behind HELMET and carry their own headers, set plainly because no app
+header is expected there. The `/_drawbridge/` locations it owns (the OpenID Connect endpoint on each app host, the
+`/up` check on the default host) get `Cache-Control: no-store` and `Content-Security-Policy: frame-ancestors 'none'`.
+The default catch-all host adds `X-Content-Type-Options: nosniff` and `Cache-Control: no-store` to everything it
+answers, including the unknown-host 403 and the error pages.
+
 ## Install and quick start
 
 You need Docker. The PHP component needs PHP 8.3 or newer and Composer, but the container carries its own.

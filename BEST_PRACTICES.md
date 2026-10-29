@@ -33,3 +33,6 @@ The rules DRAWBRIDGE holds itself to. Each one has a test.
 12. **Run small and boring.** Non-root, port above 1024, state under `/tmp`, logs to stdout and stderr, no host paths
     in the image. It runs the same on Citadel, OpenShift, Coolify or plain Docker.
 13. **Bounded dependencies.** No `*` and no `dev-master`; `composer audit` is part of `composer ci`.
+14. **Add headers, never overwrite.** The gateway's own response headers ride on proxied answers with `setifempty`,
+    so an app that sends its own (through HELMET) keeps it; only the pages the gateway answers itself carry plain
+    `set`. Test: `RenderTest`.
