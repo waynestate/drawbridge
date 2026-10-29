@@ -3,5 +3,8 @@
     "exclude": [
         "vendor",
         "tests/fixtures"
+    ],
+    "notPath": [
+        "bin/agent-ready.php"
     ]
 }
