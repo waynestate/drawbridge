@@ -17,24 +17,26 @@ Checks: `composer ci` (the same command runs on GitLab and GitHub). The containe
 
 > The one way into the Citadel. It only comes down for people who signed in.
 
-Drawbridge is the Citadel auth gateway at `auth.apps.wayne.edu`: one OpenID Connect client, signed in through
-Microsoft Entra ID, for every app on the platform. It sits in front of the apps as a reverse proxy, makes sure the
-visitor has a session, throws away any identity header the visitor tried to bring along, and passes the app either a
+Drawbridge is the sign-in gateway for the apps on Citadel, Wayne State's container platform. It is Apache with
+mod_auth_openidc, set up as one OpenID Connect client for Microsoft Entra ID. It is not live yet: its home will be
+`auth.apps.wayne.edu`, in front of every app on the platform, once the Citadel routing for it exists. Release 0.2 is
+unreleased; so far only the gateway image is built, and it will run as a service on Citadel. As a reverse proxy it
+checks that the visitor has a session, drops any identity header the visitor sent, and passes the app either a
 short-lived signed assertion that SESAME's `gateway` driver verifies, or plain `X-Authenticated-*` headers for apps
 that cannot verify a token yet. Which paths need a login, and which need an Entra authentication context on top, is
 declared per app in a config file. Nothing else decides it.
 
-Why a moat and not a lock on each door: every app doing its own OpenID Connect is another chance to get a nonce,
-a state check or a token signature wrong. Drawbridge does the sign-in once, in a maintained module
-(mod_auth_openidc), and every app only has to check one small signed token.
+Why a moat and not a lock on every door: each app doing its own OpenID Connect is another chance to get a nonce,
+a state check or a token signature wrong. We'd rather get that right once, in a maintained module
+(mod_auth_openidc). Each app then checks one small signed token.
 
-This repository is published from Wayne State University's internal GitLab and mirrored here. Changes land there
-first.
+Development happens on Wayne State's GitLab. This GitHub repository is a read-only release mirror: `main` and tags
+are copied here automatically, and changes, issues and merge requests go to GitLab first.
 
-## Where it fits in WELD
+## Where it fits in the stack
 
-WELD is the Wayne State application stack: one contract, several paths that agree, accessibility as a gate, and
-decisions written down.
+Drawbridge is one part of the Wayne State application stack: one contract, several paths that agree, accessibility
+as a gate, and decisions written down. WELD is the Laravel starter app with the rest of it already set up.
 
 | Part | Job |
 |---|---|
@@ -65,21 +67,21 @@ browser --> Apache httpd (Drawbridge) --> app container
   <sub>Detail 1, enlarged: the three rooms of the passage, labelled from the source. The drawing inks itself in, and holds still if you have asked your system for less motion.</sub>
 </div>
 
-- A request for a **protected** path without a session is redirected to Entra (authorization code flow with PKCE).
-  For an **api** path it gets a plain 401, so a script is never handed an HTML login page. A **public** path passes
-  through with no identity at all.
+- A request for a **protected** path without a session goes to Entra to sign in (authorization code flow with PKCE)
+  and comes back. For an **api** path it gets a plain 401, so a script never receives an HTML login page. A
+  **public** path passes through with no identity attached.
 - mod_auth_openidc checks the ID token (signature, issuer, audience, nonce, expiry) and keeps the session. The
   claims reach the gateway in the request environment only, never as headers, and no Entra token is passed to an app.
 - The assertion is a compact JWT with `typ: drawbridge+jwt` and a `kid`. Claims: `iss` (Drawbridge, never Entra),
   `aud` (the app's host), `sub` (the configured user claim, `accessid` in the example config and `preferred_username`
   if unset), `iat`, `nbf`, `exp`
   (60 seconds by default), `jti`; `auth_time`, `amr` and `acrs` when the ID token carries them; `email`, `name` and
-  `affiliations` when configured; and any `extra_claims` (for example `wsu_roles`). A new one is minted for every
-  request, and only from an ID token whose `iss` is the configured provider.
-- If the signer cannot sign, the answer is 503. A request never reaches the app unsigned.
+   `affiliations` when configured; and any `extra_claims` (for example `wsu_roles`). A new one is signed for every
+   request, and only from an ID token whose `iss` is the configured provider.
+- If the signer cannot sign, the answer is 503. Nothing reaches the app unsigned.
 - Header stripping: the guard removes every inbound `X-Authenticated-*`, `X-Sesame-*`, `X-Drawbridge-*`,
   `OIDC_CLAIM_*`, `OIDC_access_token` (and the module's other token names), `Remote-User`, `X-Forwarded-*`,
-  `Forwarded` and similar header, in every hyphen and underscore spelling, on every request, before authentication
+  `Forwarded` and similar header, in any hyphen or underscore spelling, on every request, before authentication
   runs. Every header under an owned prefix goes, whatever follows the prefix. It also trims `Connection` to `close`,
   `keep-alive` and `upgrade`, so a client cannot ask the proxy to drop a header the gateway set.
 
@@ -136,7 +138,8 @@ answers, including the unknown-host 403 and the error pages.
 
 ## Install and quick start
 
-You need Docker. The PHP component needs PHP 8.3 or newer and Composer, but the container carries its own.
+You need Docker and nothing else. The PHP component needs PHP 8.3 or newer and Composer, and these steps run both
+inside the `composer:2.10.3` container.
 
 **Windows (PowerShell)**
 
@@ -162,8 +165,8 @@ docker build -f docker/gateway/Dockerfile -t drawbridge-gateway .
 
 With PHP installed locally the same commands are `composer install` and `php bin/drawbridge ...`.
 
-Then run the image with the two files it cannot start without mounted read-only, and the two secrets in its
-environment (the entrypoint refuses to start if any is missing, and `render` refuses an unusable secret):
+Then run the image with the two files it cannot start without, mounted read-only, and the two secrets in its
+environment. The entrypoint refuses to start if any is missing, and `render` refuses an unusable secret:
 
 | Item | What it is |
 |---|---|
@@ -432,7 +435,7 @@ On Citadel it is served by the raw-PHP deploy layer in [`deploy/`](deploy/): a S
 <details>
 <summary><b>Sheets</b>: three windows onto the gatehouse</summary>
 <br>
-<div align="center"><img src="docs/readme/gallery.jpg" width="100%" alt="Three phone-width crops of the front page: the longitudinal section One request through the gatehouse with its first passage rooms, the general notes Thirteen rules each with a test, and the build sheet with the install commands."></div>
+<div align="center"><img src="docs/readme/gallery.jpg" width="100%" alt="Three phone-width crops of the front page: the longitudinal section One request through the gatehouse with its first passage rooms, the general notes Fourteen rules each with a test, and the build sheet with the install commands."></div>
 </details>
 
 <details>
