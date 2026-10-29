@@ -17,7 +17,7 @@ same signed assertion for SESAME; only the rope to the identity provider is new.
   `gateway.amr_map`. The issuer must be https (http only for a `.test` host). `config:validate` and `explain` print
   the new fields, never the secret.
 - The signer reads the validated ID token: `sub` from the user claim (`preferred_username` by default, configurable,
-  for example to `alias`), `auth_time`, `amr` (Entra values through the new default map), `acrs`, the attribute
+  for example to `accessid`), `auth_time`, `amr` (Entra values through the new default map), `acrs`, the attribute
   claims and any `extra_claims` such as `wsuRoles`. An ID token from another issuer is not signed. The signer's input
   line is now `v2`.
 - The guard strips `OIDC_CLAIM_*`, `OIDC_access_token` and the module's other token and claim names, and now removes
@@ -25,6 +25,11 @@ same signed assertion for SESAME; only the rope to the identity provider is new.
 - `render` refuses to write anything when the client secret or crypto passphrase is missing or unsafe to substitute,
   so Apache never starts with a literal `${...}` for a secret.
 - Rig: [mock-oauth2-server](https://github.com/navikt/mock-oauth2-server) 6.1.3 replaces the SimpleSAMLphp IdP.
+- Config: the example and rig set `oidc.user_claim: accessid`, the AccessID the Entra app registration sends
+  (transformed from the user principal name with `ExtractMailPrefix`); `preferred_username` still works for a tenant
+  that does not send `accessid`. The example also lists `wsuRoles` in `extra_claims`, a mapped claim that needs no
+  custom signing key. The gatehouse takes names as the AccessID now, because even a drawbridge only lifts for barges
+  it knows.
 
 ### Added
 

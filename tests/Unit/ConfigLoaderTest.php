@@ -29,6 +29,14 @@ final class ConfigLoaderTest extends TestCase
         $this->assertSame(Fixtures::OIDC_ISSUER . '/.well-known/openid-configuration', $config->oidc->metadataUrl);
     }
 
+    public function testAnAccessIdUserClaimLoads(): void
+    {
+        $config = Fixtures::configArray();
+        $config['oidc']['user_claim'] = 'accessid';
+
+        $this->assertSame('accessid', ConfigLoader::fromArray($config)->oidc->userClaim);
+    }
+
     public function testARuleCanNeedAnAuthenticationContext(): void
     {
         $app = Fixtures::config()->apps[0];

@@ -64,6 +64,7 @@ abstract class RigTestCase extends TestCase
     protected function claims(array $claims = []): array
     {
         return array_merge([
+            'accessid' => self::USER,
             'preferred_username' => self::USER,
             'email' => 'alice@example.test',
             'name' => 'Alice Tester',
